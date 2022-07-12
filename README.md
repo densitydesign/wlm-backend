@@ -4,10 +4,10 @@ These are scripts to retrieve data about Wiki Loves Monuments IT from WikiData.
 Contains entities types to search on wikidata, formatted as follows: `{ "q_number": "Q57821", "label": "Fortificazione" },`
 
 ###### 2. SPARQL-query.txt
-Contains the template for the SPARQL query to be performed on WikiData. You need to replace `wd:Q_NUMBER_TYPE` with the Q-number corresponding to the entity you are searching for (e.g., `wd: Q57821 # Fortificazione`)
+Contains the template for the SPARQL query to be performed on WikiData. The script `query.py` automatically replaces `wd:Q_NUMBER_TYPE` with the Q-number corresponding to the entity it is searching for (e.g., `wd:Q_NUMBER_TYPE` > `wd: Q57821 # Fortificazione`)
 
 ###### 3. query.py
-This is th first script to run. It takes every item from `types_to_search.json` and compiles a SPARQL query. Query are performed individually to avoid hitting timeouts of the WD query service. Results of each query are stored individually in the `data` folder as `.json` files.
+It takes every item from `types_to_search.json` and compiles a SPARQL query. Queries are performed individually to avoid hitting timeouts of the WD query service. Results of each query are stored individually in the `data` folder as `.json` files.
 
 Every monument is stored as a dictionary. Properties ending with `"_n"` contain semicolumn-separated values. Example:
 ````
@@ -69,7 +69,7 @@ Every monument is stored as a dictionary. Properties ending with `"_n"` contain 
 ````
 
 ###### 4. merge-data.py
-The script merges the data created by the previous script and produce a more compact version. It indicates if a monument occurred in more queries in the `groups` properties. Example:
+The script merges the data created by the previous script and produce a more compact version. It indicates if a monument occurred in more queries in the `groups` properties. Data is stored as `all_monuments.json` Example:
 ````
 {
     "mon": "Q1759446",
@@ -109,5 +109,32 @@ The script merges the data created by the previous script and produce a more com
         "Q24398318-edificio religioso"
     ],
     "commonsPicturesWLM": []
+    }
+````
+
+###### 5. places.py
+Collects municipalities, provinces and metropolitan areas from `all_monuments.json`. It creates three lists and search wikidata for informations.
+````
+{
+    "place": "Q3678587",
+    "label": "città metropolitana di Venezia",
+    "osmID": "44230",
+    "geo_n": [
+        "Point(12.3319 45.4397)"
+    ],
+    "instance_n": [
+        "Q15110"
+    ],
+    "instanceLabel_n": [
+        "metropolitan city of Italy"
+    ],
+    "replaces_n": [
+        "Q16310"
+    ],
+    "replacesLabel_n": [
+        "Province of Venice"
+    ],
+    "replaced_n": [],
+    "replacedLabel_n": []
     }
 ````
