@@ -5,47 +5,39 @@ import time
 all_monuments = []
 all_monuments_q_numbers = []
 monuments_count = 0
-search_commons = False
+search_commons = True
 commons_url = "https://commons.wikimedia.org/w/api.php"
 request_delay = 0.1
 
 with open('types_to_search.json') as types_to_search:
     data = json.load(types_to_search)
-    # data = data[:8]  # limit items for dev purposes
-    # print(data)
 
     for entity_searched in data:
         # e.g., { "q_number": "wd:Q2232001", "label": "grotta turistica" }
         q_number = entity_searched["q_number"]
         label = entity_searched["label"]
         file_path = 'data/' + q_number + '-' + label + '.json'
-        # print(q_number, label, file_path)
 
         with open('data/' + q_number + '-' + label + '.json') as json_file:
             data = json.load(json_file)
             monuments = data["results"]["bindings"]
-            # use this to limit items for dev purposes
-            # monuments = monuments[:25]
+
             for monument in monuments:
                 monuments_count += 1
-
+                # clean moument data
                 for key in monument:
                     value = monument[key]["value"]
-
                     # clean q_numbers
                     if "http://www.wikidata.org/entity/" in value:
                         value = value.replace(
                             "http://www.wikidata.org/entity/", "")
-
                     # split lists into arrays
                     if key.endswith('_n'):
                         if value == '':
                             value = []
                         else:
                             value = value.split(";")
-
                     monument[key] = value
-
                 monument["groups"] = [(q_number+"-"+label)]
 
                 # retrieves WLM photos from Commons
@@ -80,6 +72,7 @@ with open('types_to_search.json') as types_to_search:
 
                 print(monuments_count, monument["monLabel"])
 
+                # add to all_mouments list, or update element if exists already
                 if monument["mon"] not in all_monuments_q_numbers:
                     all_monuments_q_numbers.append(monument["mon"])
                     all_monuments.append(monument)
@@ -88,9 +81,11 @@ with open('types_to_search.json') as types_to_search:
                     matching_monument = list(filter(
                         lambda existing_monument: existing_monument['mon'] == monument["mon"], all_monuments))[0]
                     matching_monument["groups"].append((q_number+"-"+label))
+
             json_file.close()
     types_to_search.close()
 
+    # Check duplicates VS unique values
     print("all_monuments", monuments_count)
     print("collected_monuments", len(all_monuments_q_numbers))
 
