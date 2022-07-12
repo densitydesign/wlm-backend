@@ -94,7 +94,7 @@ with open('types_to_search.json') as types_to_search:
     print("all_monuments", monuments_count)
     print("collected_monuments", len(all_monuments_q_numbers))
 
-    with open('data/merged.json', 'w', encoding='utf-8') as f:
+    with open('data/all_monuments.json', 'w', encoding='utf-8') as f:
         json.dump(all_monuments, f, ensure_ascii=False, indent=4)
 
     print("data saved in 'data/merged.json'")
