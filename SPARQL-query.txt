@@ -1,0 +1,68 @@
+SELECT DISTINCT
+  ?mon ?monLabel
+  
+  (group_concat(DISTINCT ?parent; separator=";") as ?parent_n)
+  (group_concat(DISTINCT ?geo; separator=";") as ?geo_n)
+  
+  (group_concat(DISTINCT ?comune; separator=";") as ?comune_n)
+  (group_concat(DISTINCT ?provincia; separator=";") as ?provincia_n)
+  (group_concat(DISTINCT ?metroarea; separator=";") as ?metroarea_n)
+
+  (group_concat(DISTINCT ?wlm; separator=";") as ?wlm_n)
+  (group_concat(DISTINCT ?start; separator=";") as ?start_n)
+  (group_concat(DISTINCT ?end; separator=";") as ?end_n)
+  (group_concat(DISTINCT ?approvedBy; separator=";") as ?approvedBy_n)
+  (group_concat(DISTINCT ?relevantImage; separator=";") as ?relevantImage_n)
+  (group_concat(DISTINCT ?commonsCat; separator=";") as ?commons_n)
+WHERE {
+  VALUES ?tipi {
+    wd:Q_NUMBER_TYPE
+  }
+  
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "it,en,[AUTO_LANGUAGE]". }
+  
+  ?mon wdt:P17 wd:Q38;
+       wdt:P31/wdt:P279* ?tipi .
+  
+  MINUS {
+    ?mon wdt:P31 ?tipo .
+    FILTER ( ?tipo = wd:Q131647 || ?tipo = wd:Q973011 || ?tipo = wd:Q4618 || ?tipo = wd:Q288514 )
+  }
+  
+  ?mon wdt:P131 ?comune .
+  ?comune wdt:P31 ?com_tipo .
+
+  FILTER ( ?com_tipo = wd:Q3685476 || ?com_tipo = wd:Q747074 || ?com_tipo = wd:Q954172 ) .
+  
+  OPTIONAL {
+    ?comune wdt:P131 ?metroarea .
+    ?metroarea wdt:P31/wdt:P279* wd:Q15110 .
+  }
+  
+  OPTIONAL {
+    ?comune wdt:P131 ?provincia .
+    ?provincia wdt:P31/wdt:P279* wd:Q15089 .
+  }
+  
+  OPTIONAL { ?mon p:P2186 ?wlms . 
+    OPTIONAL { ?wlms ps:P2186 ?wlm . }
+    OPTIONAL { ?wlms pq:P580 ?start . }
+    OPTIONAL { ?wlms pq:P582 ?end . }
+    OPTIONAL { ?wlms pq:P790 ?approvedBy. }
+  }
+  OPTIONAL {
+    ?mon wdt:P361 ?parent
+  }
+  OPTIONAL {
+    ?mon wdt:P625 ?geo.
+    #?item p:P625 ?locst.
+    #?locst psv:P625 ?coordinate_node.
+    #?coordinate_node wikibase:geoLatitude ?lat.
+    #?coordinate_node wikibase:geoLongitude ?long.
+  }
+  OPTIONAL {?mon wdt:P18 ?relevantImage . }
+  OPTIONAL {?mon wdt:P373 ?commonsCat . }
+}
+
+GROUP BY ?mon ?monLabel
+ORDER BY ?monLabel
