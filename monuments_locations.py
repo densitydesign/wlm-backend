@@ -1,16 +1,6 @@
 from shapely.geometry import shape, box, mapping, Point, Polygon, MultiPolygon
 import geopandas as gpd
 import json
-import sys
-import numpy as np
-
-slice_left = None
-slice_right = None
-
-if len(sys.argv) == 3:
-    slice_left = int(sys.argv[1])
-    slice_right = int(sys.argv[2])
-    print("Process items from", slice_left, "to", slice_right)
 
 # load all shapefiles
 print("Load all shapefiles")
@@ -32,6 +22,28 @@ com = com.to_crs(epsg=4326)
 print("Com01012022_WGS84 (comuni) loaded.\n")
 # print(com)
 
+
+def get_coordinates(coordinates):
+    coordinates = coordinates.replace("Point(", "")
+    coordinates = coordinates.replace(")", "")
+    coordinates = coordinates.split(" ")
+    coordinates[0] = float(coordinates[0])
+    coordinates[1] = float(coordinates[1])
+    return coordinates
+
+
+def container_index(point, polygons):
+    for i, row in polygons.iterrows():
+        area = shape(row['geometry'])
+        minx, miny, maxx, maxy = area.bounds
+        bounding_box = box(minx, miny, maxx, maxy)
+        if bounding_box.contains(point):
+            isInside = point.within(area)
+            if (isInside):
+                return i
+    print("Container area not found")
+
+
 with open('data/all_monuments.json') as monuments_json:
     all_monuments = json.load(monuments_json)
     monuments_json.close()
@@ -48,28 +60,13 @@ with open('data/all_monuments.json') as monuments_json:
     monuments = list(filter(lambda d: len(d['geo_n']) > 0, all_monuments))
     print(len(monuments), "monuments have coordinates and can be located in municipality, province and region")
 
-    if (slice_left != None and slice_right != None):
-        monuments = monuments[slice_left:slice_right]
-        print("Process", len(monuments), "monuments")
-    
     for monument in monuments:
         index = monuments.index(monument)
-        print(index, "/", len(monuments))
-        # print(monument["mon"], monument["monLabel"])
+        print(index, "/", len(monuments),
+              monument["mon"], monument["monLabel"])
         if len(monument["geo_n"]) == 0:
             print("Missing coordinates for", monument["monLabel"])
             continue
-        coordinates = monument["geo_n"][0]
-        coordinates = coordinates.replace("Point(", "")
-        coordinates = coordinates.replace(")", "")
-        coordinates = coordinates.split(" ")
-        np_coordinates = np.array(coordinates)
-        np_coordinates = np_coordinates.astype(float)
-        coordinates = list(np_coordinates)
-        monument["coordinates"] = coordinates
-
-        _point = Point(coordinates[0], coordinates[1])
-
         # defaults
         monument["municipality"] = "unknown_municipality"
         monument["province"] = "unknown_province"
@@ -77,34 +74,46 @@ with open('data/all_monuments.json') as monuments_json:
         monument["municipality_cod"] = "unknown_municipality_code"
         monument["province_cod"] = "unknown_province_code"
         monument["region_cod"] = "unknown_code"
+        # check area
+        monument["coordinates"] = get_coordinates(monument["geo_n"][0])
+        _point = Point(monument["coordinates"][0], monument["coordinates"][1])
 
-        for i, row in com.iterrows():
-            area = shape(row['geometry'])
-            minx, miny, maxx, maxy = area.bounds
-            bounding_box = box(minx, miny, maxx, maxy)
-            if bounding_box.contains(_point):
-                isInside = _point.within(area)
-                if (isInside):
-                    pro_com = row["PRO_COM"]
-                    municipality = row["COMUNE"]
+        reg_index = container_index(_point, reg)
+        if not reg_index:
+            print("No container region")
+            continue
+        cod_reg = reg.iat[reg_index, 1]
+        region = reg.iat[reg_index, 2]
+        # print("regione", cod_reg, region)
 
-                    cod_prov = row["COD_PROV"]
-                    index = prov.index[prov['COD_PROV'] == cod_prov].tolist()[0]
-                    province = prov.iloc[index]['DEN_UTS']
+        selected_prov = prov.loc[prov['COD_REG'] == cod_reg]
+        # print(selected_prov)
+        prov_index = container_index(_point, selected_prov)
+        if not prov_index:
+            print("No container province")
+            continue
+        cod_prov = prov.iat[prov_index, 2]
+        province = prov.iat[prov_index, 7]
+        # print("provincia", cod_prov, province)
 
-                    cod_reg = row["COD_REG"]
-                    index = reg.index[reg['COD_REG'] == cod_reg].tolist()[0]
-                    region = reg.iloc[index]['DEN_REG']
+        selected_com = com.loc[com['COD_PROV'] == cod_prov]
+        # print(selected_com)
+        com_index = container_index(_point, selected_com)
+        if not com_index:
+            print("No container municipality")
+            continue
+        pro_com = com.iat[com_index, 5]
+        municipality = com.iat[com_index, 7]
+        # print("municipality", pro_com, municipality)
 
-                    monument["municipality"] = municipality
-                    monument["province"] = province
-                    monument["region"] = region
-                    monument["municipality_cod"] = pro_com
-                    monument["province_cod"] = cod_prov
-                    monument["region_cod"] = cod_reg
-                    print("\t", monument["monLabel"],
-                        "is inside", municipality, province, region)
-                    continue
+        # print(pro_com, municipality, cod_prov, province, cod_reg, region)
+        monument["municipality"] = municipality
+        monument["province"] = province
+        monument["region"] = region
+        monument["municipality_cod"] = str(pro_com)
+        monument["province_cod"] = str(cod_prov)
+        monument["region_cod"] = str(cod_reg)
 
-with open('data/all_monuments_places'+str(slice_left)+'_'+str(slice_right-1)+'.json', 'w', encoding='utf-8') as f:
+
+with open('data/all_monuments_places.json', 'w', encoding='utf-8') as f:
     json.dump(monuments, f, ensure_ascii=False, indent=4)
