@@ -35,12 +35,9 @@ def get_coordinates(coordinates):
 def container_index(point, polygons):
     for i, row in polygons.iterrows():
         area = shape(row['geometry'])
-        minx, miny, maxx, maxy = area.bounds
-        bounding_box = box(minx, miny, maxx, maxy)
-        if bounding_box.contains(point):
-            isInside = point.within(area)
-            if (isInside):
-                return i
+        isInside = point.within(area)
+        if (isInside):
+            return i
     print("Container area not found")
 
 
@@ -79,7 +76,7 @@ with open('data/all_monuments.json') as monuments_json:
         _point = Point(monument["coordinates"][0], monument["coordinates"][1])
 
         reg_index = container_index(_point, reg)
-        if not reg_index:
+        if reg_index==None:
             print("No container region")
             continue
         cod_reg = reg.iat[reg_index, 1]
@@ -89,7 +86,7 @@ with open('data/all_monuments.json') as monuments_json:
         selected_prov = prov.loc[prov['COD_REG'] == cod_reg]
         # print(selected_prov)
         prov_index = container_index(_point, selected_prov)
-        if not prov_index:
+        if prov_index==None:
             print("No container province")
             continue
         cod_prov = prov.iat[prov_index, 2]
@@ -99,7 +96,7 @@ with open('data/all_monuments.json') as monuments_json:
         selected_com = com.loc[com['COD_PROV'] == cod_prov]
         # print(selected_com)
         com_index = container_index(_point, selected_com)
-        if not com_index:
+        if com_index==None:
             print("No container municipality")
             continue
         pro_com = com.iat[com_index, 5]
@@ -113,7 +110,6 @@ with open('data/all_monuments.json') as monuments_json:
         monument["municipality_cod"] = str(pro_com)
         monument["province_cod"] = str(cod_prov)
         monument["region_cod"] = str(cod_reg)
-
 
 with open('data/all_monuments_places.json', 'w', encoding='utf-8') as f:
     json.dump(monuments, f, ensure_ascii=False, indent=4)
