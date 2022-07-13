@@ -1,4 +1,4 @@
-from shapely.geometry import shape, mapping, Point, Polygon, MultiPolygon
+from shapely.geometry import shape, box, mapping, Point, Polygon, MultiPolygon
 import geopandas as gpd
 import json
 import sys
@@ -53,6 +53,8 @@ with open('data/all_monuments.json') as monuments_json:
         print("Process", len(monuments), "monuments")
     
     for monument in monuments:
+        index = monuments.index(monument)
+        print(index, "/", len(monuments))
         # print(monument["mon"], monument["monLabel"])
         if len(monument["geo_n"]) == 0:
             print("Missing coordinates for", monument["monLabel"])
@@ -75,31 +77,34 @@ with open('data/all_monuments.json') as monuments_json:
         monument["municipality_cod"] = "unknown_municipality_code"
         monument["province_cod"] = "unknown_province_code"
         monument["region_cod"] = "unknown_code"
-        
+
         for i, row in com.iterrows():
             area = shape(row['geometry'])
-            isInside = _point.within(area)
-            if (isInside):
-                pro_com = row["PRO_COM"]
-                municipality = row["COMUNE"]
+            minx, miny, maxx, maxy = area.bounds
+            bounding_box = box(minx, miny, maxx, maxy)
+            if bounding_box.contains(_point):
+                isInside = _point.within(area)
+                if (isInside):
+                    pro_com = row["PRO_COM"]
+                    municipality = row["COMUNE"]
 
-                cod_prov = row["COD_PROV"]
-                index = prov.index[prov['COD_PROV'] == cod_prov].tolist()[0]
-                province = prov.iloc[index]['DEN_UTS']
+                    cod_prov = row["COD_PROV"]
+                    index = prov.index[prov['COD_PROV'] == cod_prov].tolist()[0]
+                    province = prov.iloc[index]['DEN_UTS']
 
-                cod_reg = row["COD_REG"]
-                index = reg.index[reg['COD_REG'] == cod_reg].tolist()[0]
-                region = reg.iloc[index]['DEN_REG']
+                    cod_reg = row["COD_REG"]
+                    index = reg.index[reg['COD_REG'] == cod_reg].tolist()[0]
+                    region = reg.iloc[index]['DEN_REG']
 
-                monument["municipality"] = municipality
-                monument["province"] = province
-                monument["region"] = region
-                monument["municipality_cod"] = pro_com
-                monument["province_cod"] = cod_prov
-                monument["region_cod"] = cod_reg
-                print("\t", monument["monLabel"],
-                      "is inside", municipality, province, region)
-                continue
+                    monument["municipality"] = municipality
+                    monument["province"] = province
+                    monument["region"] = region
+                    monument["municipality_cod"] = pro_com
+                    monument["province_cod"] = cod_prov
+                    monument["region_cod"] = cod_reg
+                    print("\t", monument["monLabel"],
+                        "is inside", municipality, province, region)
+                    continue
 
 with open('data/all_monuments_places'+str(slice_left)+'_'+str(slice_right-1)+'.json', 'w', encoding='utf-8') as f:
     json.dump(monuments, f, ensure_ascii=False, indent=4)
