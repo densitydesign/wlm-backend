@@ -2,6 +2,7 @@ from shapely.geometry import shape, mapping, Point, Polygon, MultiPolygon
 import geopandas as gpd
 import json
 import sys
+import numpy as np
 
 slice_left = None
 slice_right = None
@@ -60,9 +61,12 @@ with open('data/all_monuments.json') as monuments_json:
         coordinates = coordinates.replace("Point(", "")
         coordinates = coordinates.replace(")", "")
         coordinates = coordinates.split(" ")
+        np_coordinates = np.array(coordinates)
+        np_coordinates = np_coordinates.astype(float)
+        coordinates = list(np_coordinates)
+        monument["coordinates"] = coordinates
 
-        # print(coordinates)
-        _point = Point(float(coordinates[0]), float(coordinates[1]))
+        _point = Point(coordinates[0], coordinates[1])
 
         for i, row in com.iterrows():
             area = shape(row['geometry'])
