@@ -29,12 +29,15 @@ with open(fileName) as f:
     data = list(filter(lambda d: (
         'region' in d and 'province' in d and 'municipality' in d), data))
 
-    def nest_categories(data, key="category"):
+    def nest_categories(data, counted=True, key="category"):
         result = {}
         group_sorted = sorted(data, key=lambda d: d[key])
         for k, g in groupby(group_sorted, lambda d: d[key]):
             nested = list(g)
-            result[k] = len(nested)
+            if counted:
+                result[k] = len(nested)
+            else:
+                result[k] = nested
         return result
 
     final_data["regions"] = {}
@@ -67,6 +70,8 @@ with open(fileName) as f:
                 final_data["regions"][k]["provinces"][kk]["municipalities"][kkk] = {}
                 final_data["regions"][k]["provinces"][kk]["municipalities"][kkk]["aggregated"] = nest_categories(
                     nested)
+                final_data["regions"][k]["provinces"][kk]["municipalities"][kkk]["monuments"] = nest_categories(
+                    nested, False)
 
 with open('data/aggregated/'+outputName+'.json', 'w', encoding='utf-8') as f:
     json.dump(final_data, f, ensure_ascii=False, indent=4)
