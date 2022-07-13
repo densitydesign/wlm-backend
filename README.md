@@ -113,7 +113,7 @@ The script merges the data created by the previous script and produce a more com
 ````
 
 ###### 5. monuments_locations.py
-It takes `all_monuments.json` and works on a subset with only monuments with coordinates. For each monument it checks coordinates points and returns the municipality in which it is contained. It does this using [ISTAT shapefiles](https://www.istat.it/it/archivio/222527), licence CC-BY 3.0 IT [https://www.istat.it/it/dati-analisi-e-prodotti/open-data](https://www.istat.it/it/dati-analisi-e-prodotti/open-data).
+It takes `all_monuments.json` and works on a subset with only monuments with coordinates. For each monument it checks coordinates points and returns the municipality in which it is contained. From municipality it also retrieves province and region. It uses [ISTAT shapefiles](https://www.istat.it/it/archivio/222527), licence CC-BY 3.0 IT [https://www.istat.it/it/dati-analisi-e-prodotti/open-data](https://www.istat.it/it/dati-analisi-e-prodotti/open-data).
 ```
 {
     "mon": "Q2524958",
@@ -141,4 +141,53 @@ It takes `all_monuments.json` and works on a subset with only monuments with coo
     "province_cod": 82,
     "region_cod": 19
 }
+```
+
+###### 5. aggregate.py
+Loads a json with located files (i.e., with region, province, and municipality) and aggregates data at the three different administrative levels.
+```
+{
+    "regions": {
+        "Basilicata": {
+            "aggregated": {
+                "covered": 1,
+                "mapped": 1
+            },
+            "provinces": {
+                "Potenza": {
+                    "aggregated": {
+                        "covered": 1,
+                        "mapped": 1
+                    },
+                    "municipalities": {
+                        "Campomaggiore": {
+                            "aggregated": {
+                                "covered": 1
+                            }
+                        },
+                        "Potenza": {
+                            "aggregated": {
+                                "mapped": 1
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "Campania": {
+            "aggregated": {
+                "contest": 2,
+                "covered": 25,
+                "mapped": 19
+            },
+            "provinces": {
+                "Avellino": {
+                    "aggregated": {
+                        "covered": 1
+                    },
+                    "municipalities": {
+                        "Avellino": {
+                            "aggregated": {
+                                "covered": 1
+...
 ```
