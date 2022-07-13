@@ -112,29 +112,33 @@ The script merges the data created by the previous script and produce a more com
     }
 ````
 
-###### 5. places.py
-Collects municipalities, provinces and metropolitan areas from `all_monuments.json`. It creates three lists and search wikidata for informations.
-````
+###### 5. monuments_locations.py
+It takes `all_monuments.json` and works on a subset with only monuments with coordinates. For each monument it checks coordinates points and returns the municipality in which it is contained. It does this using [ISTAT shapefiles](https://www.istat.it/it/archivio/222527), licence CC-BY 3.0 IT [https://www.istat.it/it/dati-analisi-e-prodotti/open-data](https://www.istat.it/it/dati-analisi-e-prodotti/open-data).
+```
 {
-    "place": "Q3678587",
-    "label": "città metropolitana di Venezia",
-    "osmID": "44230",
+    "mon": "Q2524958",
+    "monLabel": "Q2524958",
+    "parent_n": [],
     "geo_n": [
-        "Point(12.3319 45.4397)"
+        "Point(13.511284 38.07662)"
     ],
-    "instance_n": [
-        "Q15110"
+    "wlm_n": [],
+    "start_n": [],
+    "end_n": [],
+    "approvedBy_n": [],
+    "relevantImage_n": [
+        "http://commons.wikimedia.org/wiki/Special:FilePath/Bagheria%20%28Pa%29%20-%20Villa%20Lanza%20di%20Trabia.jpg"
     ],
-    "instanceLabel_n": [
-        "metropolitan city of Italy"
+    "commons_n": [],
+    "groups": [
+        "Q3950-villa"
     ],
-    "replaces_n": [
-        "Q16310"
-    ],
-    "replacesLabel_n": [
-        "Province of Venice"
-    ],
-    "replaced_n": [],
-    "replacedLabel_n": []
-    }
-````
+    "commonsPicturesWLM": [],
+    "municipality": "Bagheria",
+    "province": "Palermo",
+    "region": "Sicilia",
+    "municipality_cod": 82006,
+    "province_cod": 82,
+    "region_cod": 19
+}
+```
