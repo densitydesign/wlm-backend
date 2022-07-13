@@ -68,6 +68,14 @@ with open('data/all_monuments.json') as monuments_json:
 
         _point = Point(coordinates[0], coordinates[1])
 
+        # defaults
+        monument["municipality"] = "unknown_municipality"
+        monument["province"] = "unknown_province"
+        monument["region"] = "unknown_region"
+        monument["municipality_cod"] = "unknown_municipality_code"
+        monument["province_cod"] = "unknown_province_code"
+        monument["region_cod"] = "unknown_code"
+        
         for i, row in com.iterrows():
             area = shape(row['geometry'])
             isInside = _point.within(area)
