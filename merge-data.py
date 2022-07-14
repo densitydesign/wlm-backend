@@ -4,7 +4,7 @@ import requests
 all_monuments = []
 all_monuments_q_numbers = []
 monuments_count = 0
-search_commons = False
+search_commons = True
 commons_url = "https://commons.wikimedia.org/w/api.php"
 request_delay = 0.1
 
@@ -108,7 +108,6 @@ with open('types_to_search.json') as types_to_search:
                     print("\tupdating", mon_q_number)
                     index = all_monuments_q_numbers.index(mon_q_number)
                     matching_monument = all_monuments[index]
-                    # matching_monument = next(item for item in all_monuments if item['mon'] == mon_q_number)
                     matching_monument["groups"].append((q_number+"-"+label))
 
             json_file.close()
