@@ -15,8 +15,6 @@ with open('types_to_search.json') as types_to_search:
     # Include monuments collecte because in contest
     data.append({ "q_number": "Q0", "label": "monuments-in-contest" })
 
-    data = [{ "q_number": "Q0", "label": "monuments-in-contest" }]
-
     for entity_searched in data:
         # e.g., { "q_number": "Q2232001", "label": "grotta turistica" }
         q_number = entity_searched["q_number"]
