@@ -4,7 +4,7 @@ import requests
 all_monuments = []
 all_monuments_q_numbers = []
 monuments_count = 0
-search_commons = True
+search_commons = False
 commons_url = "https://commons.wikimedia.org/w/api.php"
 request_delay = 0.1
 
@@ -62,7 +62,7 @@ def search_commons(wlm_id):
         print("\tFound no photos")
         return []
 
-
+print("Merging and formatting data...")
 with open('types_to_search.json') as types_to_search:
     data = json.load(types_to_search)
 
@@ -74,35 +74,38 @@ with open('types_to_search.json') as types_to_search:
         q_number = entity_searched["q_number"]
         label = entity_searched["label"]
         file_path = 'data/' + q_number + '-' + label + '.json'
-
+        
+        print("Items in",q_number,file_path)
+        print("Total monuments parsed up to now:",monuments_count)
         with open('data/' + q_number + '-' + label + '.json') as json_file:
             data = json.load(json_file)
             monuments = data["results"]["bindings"]
 
             for monument in monuments:
                 monuments_count += 1
-                print(monuments_count, monument["monLabel"]["value"])
+                # print(monuments_count, monument["monLabel"]["value"])
+
+                mon_q_number = monument["mon"]["value"].replace("http://www.wikidata.org/entity/", "")
 
                 # add to all_mouments list, or update element if exists already
-                if monument["mon"]["value"] not in all_monuments_q_numbers:
+                if mon_q_number not in all_monuments_q_numbers:
                     # clean moument data
                     monument = format_monument(monument)
                     monument["groups"] = [(q_number+"-"+label)]
 
                     # retrieves WLM photos from Commons
                     monument["commonsPicturesWLM"] = []
-                    if search_commons and len(monument["wlm_n"]):
+                    if search_commons == True and len(monument["wlm_n"]):
                         for wlm_id in monument["wlm_n"]:
                             monument["commonsPicturesWLM"] = search_commons(
                                 wlm_id)
 
-                    all_monuments_q_numbers.append(monument["mon"])
+                    all_monuments_q_numbers.append(mon_q_number)
                     all_monuments.append(monument)
 
                 else:
-                    print("\tupdating", monument["mon"])
-                    matching_monument = list(filter(
-                        lambda existing_monument: existing_monument['mon'] == monument["mon"], all_monuments))[0]
+                    print("\tupdating", mon_q_number)
+                    matching_monument = next(item for item in all_monuments if item['mon'] == mon_q_number)
                     matching_monument["groups"].append((q_number+"-"+label))
 
             json_file.close()
@@ -115,4 +118,4 @@ with open('types_to_search.json') as types_to_search:
     with open('data/all_monuments.json', 'w', encoding='utf-8') as f:
         json.dump(all_monuments, f, ensure_ascii=False, indent=4)
 
-    print("data saved in 'data/all_monuments.json'")
+    print("data saved in 'data/all_monuments----.json'")
