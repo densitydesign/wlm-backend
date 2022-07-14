@@ -19,9 +19,9 @@ with open(fileName) as f:
     for m in data:
         m["category"] = "mapped"
         if len(m['wlm_n']) > 0:
-            m["category"] = "contest"
+            m["category"] = "authorized"
             if len(m["commonsPicturesWLM"]) > 0:
-                m["category"] = "covered"
+                m["category"] = "photographed"
 
     data2check = list(filter(lambda d: not 'region' in d, data))
     # print(data2check)
