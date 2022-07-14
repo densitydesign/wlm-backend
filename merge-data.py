@@ -12,8 +12,13 @@ request_delay = 0.1
 with open('types_to_search.json') as types_to_search:
     data = json.load(types_to_search)
 
+    # Include monuments collecte because in contest
+    data.append({ "q_number": "Q0", "label": "monuments-in-contest" })
+
+    data = [{ "q_number": "Q0", "label": "monuments-in-contest" }]
+
     for entity_searched in data:
-        # e.g., { "q_number": "wd:Q2232001", "label": "grotta turistica" }
+        # e.g., { "q_number": "Q2232001", "label": "grotta turistica" }
         q_number = entity_searched["q_number"]
         label = entity_searched["label"]
         file_path = 'data/' + q_number + '-' + label + '.json'
@@ -53,18 +58,53 @@ with open('types_to_search.json') as types_to_search:
                         }
                         print("\tRetrieves photos from Commons using WLM id:", wlm_id)
                         r = requests.get(commons_url, params)
-                        print("\t" + r.url)
+                        # print("\t" + r.url)
                         commons_data = r.json()
                         totalhits = commons_data["query"]["searchinfo"]["totalhits"]
                         if totalhits > 0:
                             search_results = commons_data["query"]["search"]
-                            for _result in search_results:
-                                del _result["wordcount"]
-                                del _result["snippet"]
-                                del _result["size"]
-                            monument["commonsPicturesWLM"] = search_results
+                            # for _result in search_results:
+                            #     del _result["wordcount"]
+                            #     del _result["snippet"]
+                            #     del _result["size"]
+                            #     del _result["ns"]
+                            
+                            # request further info for commons picture
+                            page_ids = list(map(lambda _result: str(_result['pageid']), search_results))
+                            page_ids = '|'.join(page_ids)
+                            params = {
+                                'action': 'query',
+                                'prop':'imageinfo',
+                                'iiprop':'extmetadata',
+                                'format':'json',
+                                'pageids':page_ids
+                            }
+                            print("\tRetrieves further info for images")
+                            r = requests.get(commons_url, params)
+
+                            images_data = r.json()
+                            images_data = images_data["query"]["pages"]
+
+                            images_data_clean = []
+                            for pageid in images_data:
+                                image = images_data[str(pageid)]
+                                temp_obj = {
+                                    "page_id" : image["pageid"],
+                                    "title": image["title"],
+                                    "dateTimeOriginal": image["imageinfo"][0]["extmetadata"]["DateTimeOriginal"]["value"],
+                                    "DateTime": image["imageinfo"][0]["extmetadata"]["DateTime"]["value"],
+                                }
+                                # print(image["pageid"])
+                                # print(image["title"])
+                                # print(image["imageinfo"][0]["extmetadata"]["DateTimeOriginal"])
+                                # print(image["imageinfo"][0]["extmetadata"]["DateTime"])
+                                # print(image["imageinfo"][0]["extmetadata"]["ObjectName"])
+                                images_data_clean.append(temp_obj)
+
+                            monument["commonsPicturesWLM"] = images_data_clean
                             print("\tAdded " + str(totalhits) +
                                   " items to commonsPicturesWLM")
+
                         else:
                             print("\tFound no photos")
                         print("\tSleeps " + str(request_delay) + " sec...")
@@ -92,4 +132,4 @@ with open('types_to_search.json') as types_to_search:
     with open('data/all_monuments.json', 'w', encoding='utf-8') as f:
         json.dump(all_monuments, f, ensure_ascii=False, indent=4)
 
-    print("data saved in 'data/merged.json'")
+    print("data saved in 'data/all_monuments.json'")
