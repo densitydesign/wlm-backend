@@ -12,7 +12,7 @@ request_delay = 0.1
 with open('types_to_search.json') as types_to_search:
     data = json.load(types_to_search)
 
-    # Include monuments collecte because in contest
+    # Include monuments participating into the contest
     data.append({ "q_number": "Q0", "label": "monuments-in-contest" })
 
     for entity_searched in data:
