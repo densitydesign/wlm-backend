@@ -13,9 +13,29 @@ if not os.path.exists(path):
 
 url = 'https://query.wikidata.org/sparql'
 query = ''
-with open('SPARQL-query.txt', 'r') as f:
+with open('SPARQL-typologies.txt', 'r') as f:
     query = f.read()
     f.close()
+
+# Retrieves monuments in contest
+print("Retrieves monuments in contest")
+query_wlm = ''
+with open('SPARQL-contest.txt', 'r') as f:
+    query_wlm = f.read()
+    f.close()
+
+# performs request
+r = requests.get(
+    url, params={'format': 'json', 'query': query_wlm})
+data = r.json()
+
+# stores data as it is
+with open('data/Q0-monuments-in-contest.json', 'w', encoding='utf-8') as f:
+    json.dump(data, f, ensure_ascii=False, indent=4)
+    f.close()
+    
+print("Sleeps 5 seconds...")
+time.sleep(5)
 
 # Preparing requests
 print("Preparing requests...")
