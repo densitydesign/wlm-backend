@@ -96,7 +96,8 @@ with open('types_to_search.json') as types_to_search:
 
                     # retrieves WLM photos from Commons
                     monument["commonsPicturesWLM"] = []
-                    if search_commons == True and len(monument["wlm_n"]):
+                    if search_commons and len(monument["wlm_n"]):
+                        print("Search commons for",mon_q_number,monument["monLabel"])
                         for wlm_id in monument["wlm_n"]:
                             monument["commonsPicturesWLM"] = search_commons(
                                 wlm_id)
