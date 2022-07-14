@@ -1,6 +1,5 @@
 import json
 import requests
-import time
 
 all_monuments = []
 all_monuments_q_numbers = []
