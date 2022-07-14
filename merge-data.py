@@ -9,11 +9,66 @@ search_commons = True
 commons_url = "https://commons.wikimedia.org/w/api.php"
 request_delay = 0.1
 
+
+def format_monument(monument):
+    for key in monument:
+        value = monument[key]["value"]
+        # clean q_numbers
+        if "http://www.wikidata.org/entity/" in value:
+            value = value.replace(
+                "http://www.wikidata.org/entity/", "")
+        # split lists into arrays
+        if key.endswith('_n'):
+            if value == '':
+                value = []
+            else:
+                value = value.split(";")
+        monument[key] = value
+    return monument
+
+
+def search_commons(wlm_id):
+    params = {
+        "action": "query",
+        "format": "json",
+        "prop": "imageinfo",
+        "generator": "search",
+        "iiprop": "extmetadata",
+        "gsrsearch": '"' + wlm_id + '"',
+        "gsrnamespace": "6"
+    }
+    print("\tRetrieves photos from Commons using WLM id:", wlm_id)
+    r = requests.get(commons_url, params)
+    data = r.json()
+    if "query" in data and "pages" in data["query"] and len(data["query"]["pages"]) > 0:
+        images_data_clean = []
+        for pageid in data["query"]["pages"]:
+            image = data["query"]["pages"][str(pageid)]
+            temp_obj = {}
+            if "pageid" in image:
+                temp_obj["pageid"] = image["pageid"]
+            if "title" in image:
+                temp_obj["title"] = image["title"]
+            if "imageinfo" in image and len(image["imageinfo"]) > 0 and "extmetadata" in image["imageinfo"][0]:
+                extmetadata = image["imageinfo"][0]["extmetadata"]
+                if "DateTimeOriginal" in extmetadata and "value" in extmetadata["DateTimeOriginal"]:
+                    temp_obj["DateTimeOriginal"] = extmetadata["DateTimeOriginal"]["value"]
+                if "DateTime" in extmetadata and "value" in extmetadata["DateTime"]:
+                    temp_obj["DateTime"] = extmetadata["DateTime"]["value"]
+
+            images_data_clean.append(temp_obj)
+        print("\tFound", len(images_data_clean), "photos")
+        return images_data_clean
+    else:
+        print("\tFound no photos")
+        return []
+
+
 with open('types_to_search.json') as types_to_search:
     data = json.load(types_to_search)
 
     # Include monuments participating into the contest
-    data.append({ "q_number": "Q0", "label": "monuments-in-contest" })
+    data.append({"q_number": "Q0", "label": "monuments-in-contest"})
 
     for entity_searched in data:
         # e.g., { "q_number": "Q2232001", "label": "grotta turistica" }
@@ -27,93 +82,24 @@ with open('types_to_search.json') as types_to_search:
 
             for monument in monuments:
                 monuments_count += 1
-                # clean moument data
-                for key in monument:
-                    value = monument[key]["value"]
-                    # clean q_numbers
-                    if "http://www.wikidata.org/entity/" in value:
-                        value = value.replace(
-                            "http://www.wikidata.org/entity/", "")
-                    # split lists into arrays
-                    if key.endswith('_n'):
-                        if value == '':
-                            value = []
-                        else:
-                            value = value.split(";")
-                    monument[key] = value
-                monument["groups"] = [(q_number+"-"+label)]
-
-                # retrieves WLM photos from Commons
-                monument["commonsPicturesWLM"] = []
-                if search_commons and len(monument["wlm_n"]):
-                    for wlm_id in monument["wlm_n"]:
-                        params = {
-                            'action': 'query',
-                            'list': 'search',
-                            'srnamespace': '6',
-                            'srsearch': '"' + wlm_id + '"',
-                            'format': 'json'
-                        }
-                        print("\tRetrieves photos from Commons using WLM id:", wlm_id)
-                        r = requests.get(commons_url, params)
-                        # print("\t" + r.url)
-                        commons_data = r.json()
-                        totalhits = commons_data["query"]["searchinfo"]["totalhits"]
-                        if totalhits > 0:
-                            search_results = commons_data["query"]["search"]
-                            # for _result in search_results:
-                            #     del _result["wordcount"]
-                            #     del _result["snippet"]
-                            #     del _result["size"]
-                            #     del _result["ns"]
-                            
-                            # request further info for commons picture
-                            page_ids = list(map(lambda _result: str(_result['pageid']), search_results))
-                            page_ids = '|'.join(page_ids)
-                            params = {
-                                'action': 'query',
-                                'prop':'imageinfo',
-                                'iiprop':'extmetadata',
-                                'format':'json',
-                                'pageids':page_ids
-                            }
-                            print("\tRetrieves further info for images")
-                            r = requests.get(commons_url, params)
-
-                            images_data = r.json()
-                            images_data = images_data["query"]["pages"]
-
-                            images_data_clean = []
-                            for pageid in images_data:
-                                image = images_data[str(pageid)]
-                                temp_obj = {
-                                    "page_id" : image["pageid"],
-                                    "title": image["title"],
-                                    "dateTimeOriginal": image["imageinfo"][0]["extmetadata"]["DateTimeOriginal"]["value"],
-                                    "DateTime": image["imageinfo"][0]["extmetadata"]["DateTime"]["value"],
-                                }
-                                # print(image["pageid"])
-                                # print(image["title"])
-                                # print(image["imageinfo"][0]["extmetadata"]["DateTimeOriginal"])
-                                # print(image["imageinfo"][0]["extmetadata"]["DateTime"])
-                                # print(image["imageinfo"][0]["extmetadata"]["ObjectName"])
-                                images_data_clean.append(temp_obj)
-
-                            monument["commonsPicturesWLM"] = images_data_clean
-                            print("\tAdded " + str(totalhits) +
-                                  " items to commonsPicturesWLM")
-
-                        else:
-                            print("\tFound no photos")
-                        print("\tSleeps " + str(request_delay) + " sec...")
-                        time.sleep(request_delay)
-
-                print(monuments_count, monument["monLabel"])
+                print(monuments_count, monument["monLabel"]["value"])
 
                 # add to all_mouments list, or update element if exists already
-                if monument["mon"] not in all_monuments_q_numbers:
+                if monument["mon"]["value"] not in all_monuments_q_numbers:
+                    # clean moument data
+                    monument = format_monument(monument)
+                    monument["groups"] = [(q_number+"-"+label)]
+
+                    # retrieves WLM photos from Commons
+                    monument["commonsPicturesWLM"] = []
+                    if search_commons and len(monument["wlm_n"]):
+                        for wlm_id in monument["wlm_n"]:
+                            monument["commonsPicturesWLM"] = search_commons(
+                                wlm_id)
+
                     all_monuments_q_numbers.append(monument["mon"])
                     all_monuments.append(monument)
+
                 else:
                     print("\tupdating", monument["mon"])
                     matching_monument = list(filter(
