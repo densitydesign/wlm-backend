@@ -83,6 +83,7 @@ with open('types_to_search.json') as types_to_search:
 
             for monument in monuments:
                 monuments_count += 1
+
                 # print(monuments_count, monument["monLabel"]["value"])
 
                 mon_q_number = monument["mon"]["value"].replace("http://www.wikidata.org/entity/", "")
@@ -105,7 +106,9 @@ with open('types_to_search.json') as types_to_search:
 
                 else:
                     print("\tupdating", mon_q_number)
-                    matching_monument = next(item for item in all_monuments if item['mon'] == mon_q_number)
+                    index = all_monuments_q_numbers.index(mon_q_number)
+                    matching_monument = all_monuments[index]
+                    # matching_monument = next(item for item in all_monuments if item['mon'] == mon_q_number)
                     matching_monument["groups"].append((q_number+"-"+label))
 
             json_file.close()
@@ -115,7 +118,9 @@ with open('types_to_search.json') as types_to_search:
     print("all_monuments", monuments_count)
     print("collected_monuments", len(all_monuments_q_numbers))
 
-    with open('data/all_monuments.json', 'w', encoding='utf-8') as f:
+    fileName = 'data/all_monuments.json'
+
+    with open(fileName, 'w', encoding='utf-8') as f:
         json.dump(all_monuments, f, ensure_ascii=False, indent=4)
 
-    print("data saved in 'data/all_monuments----.json'")
+    print("data saved in", fileName)
