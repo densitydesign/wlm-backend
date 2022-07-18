@@ -4,6 +4,7 @@ SELECT DISTINCT
   (group_concat(DISTINCT ?parent; separator=";") as ?parent_n)
   (group_concat(DISTINCT ?geo; separator=";") as ?geo_n)
   (group_concat(DISTINCT ?place; separator=";") as ?place_n)
+  (group_concat(DISTINCT ?place_geo; separator=";") as ?place_geo_n)
   (group_concat(DISTINCT ?wlm; separator=";") as ?wlm_n)
   (group_concat(DISTINCT ?start; separator=";") as ?start_n)
   (group_concat(DISTINCT ?end; separator=";") as ?end_n)
@@ -15,7 +16,7 @@ WHERE {
   SERVICE wikibase:label { bd:serviceParam wikibase:language "it, [AUTO_LANGUAGE]". }
   
   # seleziona i monumenti partecipanti a WLM in Italia
-  ?mon wdt:P131* wd:Q38;
+  ?mon wdt:P131* wd:Q490;
         p:P2186 ?wlms.
   
   # esclude i comuni dalla lista
@@ -28,16 +29,20 @@ WHERE {
   OPTIONAL { ?wlms pq:P582 ?end . }
   OPTIONAL { ?wlms pq:P790 ?approvedBy. }
   
-  OPTIONAL { ?mon wdt:P625 ?geo. }
-  OPTIONAL { ?mon wdt:P131 ?place }
+  OPTIONAL { ?mon wdt:P625 ?geo . }
+  OPTIONAL {
+    ?mon wdt:P131 ?place .
+    OPTIONAL {
+      ?place wdt:P625 ?place_geo .
+    }
+  }
   
   OPTIONAL { ?mon wdt:P361 ?parent }
-  OPTIONAL { ?mon wdt:P625 ?geo. }
   OPTIONAL { ?mon wdt:P18 ?relevantImage . }
   OPTIONAL { ?mon wdt:P373 ?commonsCat . }
   
 
 }
 
-GROUP BY ?mon ?monLabel
+GROUP BY ?mon ?monLabel ?dateeee
 ORDER BY ?monLabel
