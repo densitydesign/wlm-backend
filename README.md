@@ -148,3 +148,42 @@ It takes `all_monuments.json` and works on a subset with only monuments with coo
 
 ###### 7. aggregate.py
 Loads a json with located files (i.e., with region, province, and municipality) and aggregates data at different administrative levels.
+```
+[
+    [
+        "Abruzzo",
+        [
+            [
+                "2012-01-01",
+                [
+                    {
+                        "group": "mapped",
+                        "value": 8,
+                        "valueDistinct": 0
+                    },
+                    {
+                        "group": "authorized",
+                        "value": 8,
+                        "valueDistinct": 0
+                    },
+                    {
+                        "group": "photographed",
+                        "value": 8,
+                        "valueDistinct": 8
+                    }
+                ]
+            ],
+            [
+                "2012-06-01",
+                [...]
+            ],
+            [...]
+        ],
+        "region",
+        [
+            "Abruzzo",
+            "Teramo",
+            "Roseto degli Abruzzi"
+        ]
+    ],
+```

@@ -276,7 +276,7 @@ def nest_categories(data, counted=True, key="category"):
     results = []
     group_sorted = sorted(data, key=lambda d: d[key])
     for k, g in groupby(group_sorted, lambda d: d[key]):
-        print(k)
+        # print(k)
         nested = list(g)
         if counted:
             nested =  len(nested)
@@ -289,35 +289,47 @@ def nest_categories(data, counted=True, key="category"):
 
 formatted_data = format_data(data)
 
+aggregation_type = "region"
+print("aggregation by", aggregation_type)
+
 filter_area = {
-    "area_type": "region",
-    "area_name": "Lombardia"
+    # "area_type": "province",
+    # "area_name": "Como"
 }
 
 if filter_area:
-    print(filter_area)
+    print("filter:", filter_area["area_type"], filter_area["area_name"])
     formatted_data = list(filter(lambda d: d[filter_area["area_type"]] == filter_area["area_name"], formatted_data))
+else:
+    print("no filter set")
 
-aggregation_type = "municipality"
 nested_data = nest_categories(formatted_data, False, aggregation_type)
 
 snapshots = []
 snapshots_incremental = []
 
-data = nested_data
+data = []
 
+# print(json.dumps(nested_data[0], indent=4, default=str))
 
-for date in datetimes:
-    print(date)
-    for region in data:
-        region_name = region["key"]
-        region_data = region["values"]
-        print(region_name)
-        # count photographed monuments
+for region in nested_data:
+    region_name = region["key"]
+    region_values = region["values"]
+
+    temp_monument = region_values[0]
+
+    region_data = [region_name, [], aggregation_type, [temp_monument["region"],temp_monument["province"],temp_monument["municipality"]]]
+    # print("region_name", region_name)
+
+    for date in datetimes:
+
+        snapshot_data = [date.strftime('%Y-%m-%d'), []]
+        # print("date", date.strftime('%Y-%m-%d'))
+
         not_p = []
         p = []
         # print("Tot monuments", len(data))
-        for monument in region_data:
+        for monument in region_values:
             try:
                 if monument["date_first_pic"] <= date:
                     p.append(monument)
@@ -356,66 +368,50 @@ for date in datetimes:
         # print("mapped", len(m), len(not_m))
         # print(date, "Monuments: photos:", str(len(p)), "authorized", str(len(a)), "mapped", str(len(m)), "others", str(len(not_m)))
 
-        # temp = {
-        #     "date": date,
-        #     "area": "Italia",
-        #     "admin_level": "nation",
-        #     "total": len(p) + len(a) + len(m),
-        #     "aggregated": {
-        #         "mapped": len(m),
-        #         "authorized": len(a),
-        #         "photographed": len(p)
-        #     }
-        # }
-
-        temp = {
-            "date": date,
-            "area": region_name,
+        temp_mapped = {
+            # "date": date,
+            # "area": region_name,
             "group": "mapped",
-            "value": len(m)
+            "value": len(m) + len(a) + len(p),
+            "valueDistinct": len(m)
         }
-        snapshots.append(temp)
-        temp = {
-            "date": date,
-            "area": region_name,
-            "group": "authorized",
-            "value": len(a)
-        }
-        snapshots.append(temp)
-        temp = {
-            "date": date,
-            "area": region_name,
-            "group": "photographed",
-            "value": len(p)
-        }
-        snapshots.append(temp)
 
-        temp = {
-            "date": date,
-            "area": region_name,
+        temp_authorized = {
+            # "date": date,
+            # "area": region_name,
             "group": "mapped",
-            "value": len(m) + len(a) + len(p)
-        }
-        snapshots_incremental.append(temp)
-        temp = {
-            "date": date,
-            "area": region_name,
             "group": "authorized",
-            "value": len(a) + len(p)
+            "value": len(a) + len(p),
+            "valueDistinct": len(a)
         }
-        snapshots_incremental.append(temp)
-        temp = {
-            "date": date,
-            "area": region_name,
+
+        temp_photographed = {
+            # "date": date,
+            # "area": region_name,
+            "group": "mapped",
             "group": "photographed",
-            "value": len(p)
+            "value": len(p),
+            "valueDistinct": len(p)
         }
-        snapshots_incremental.append(temp)
 
-with open('data/aggregated/timeline-'+aggregation_type+filter_area["area_name"]+'.json', 'w', encoding='utf-8') as f:
-    json.dump(snapshots, f, ensure_ascii=False, indent=4, default=str)
+        snapshot_data[1].append(temp_mapped)
+        snapshot_data[1].append(temp_authorized)
+        snapshot_data[1].append(temp_photographed)
 
-with open('data/aggregated/timeline-'+aggregation_type+filter_area["area_name"]+'-incremental.json', 'w', encoding='utf-8') as f:
-    json.dump(snapshots_incremental, f, ensure_ascii=False, indent=4, default=str)
+        region_data[1].append(snapshot_data)
+    
+    data.append(region_data)
+
+# print("data", json.dumps(data, indent=4))
+
+filename = 'data/aggregated/' + aggregation_type
+if filter_area:
+    filename += '.filter-' + filter_area["area_name"]
+filename += '.json'
+
+with open(filename, 'w', encoding='utf-8') as f:
+    json.dump(data, f, ensure_ascii=False, indent=4, default=str)
+
+print("Saved in", filename)
 
 sys.exit()
