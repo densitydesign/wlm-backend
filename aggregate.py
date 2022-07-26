@@ -3,8 +3,6 @@ from itertools import groupby
 import sys
 import datetime
 
-# datetime.datetime(Y, M, D)
-
 dates = [
     [2012, 1, 1],
     [2012, 6, 1],
@@ -230,7 +228,6 @@ dates2 = [
 ]
 
 datetimes = list(map(lambda d: datetime.datetime(d[0], d[1], d[2]), dates))
-# print(datetimes)
 
 with open('data/all_monuments_places_first_revs.json') as f:
     data = json.load(f)
@@ -290,7 +287,6 @@ def nest_categories(data, counted=True, key="category"):
         results.append(temp)
     return results
 
-
 formatted_data = format_data(data)
 
 filter_area = {
@@ -298,28 +294,18 @@ filter_area = {
     "area_name": "Lombardia"
 }
 
-aggregation_type = "municipality"
-
 if filter_area:
     print(filter_area)
     formatted_data = list(filter(lambda d: d[filter_area["area_type"]] == filter_area["area_name"], formatted_data))
 
+aggregation_type = "municipality"
 nested_data = nest_categories(formatted_data, False, aggregation_type)
-# print(json.dumps(nested_data, indent=4, default=str))
 
 snapshots = []
 snapshots_incremental = []
 
-# data = [
-#     {
-#         "key": "Italy",
-#         "values": nested_data
-#     }
-# ]
 data = nested_data
 
-# print(json.dumps(data, indent=4, default=str))
-# sys.exit()
 
 for date in datetimes:
     print(date)
