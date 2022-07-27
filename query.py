@@ -17,25 +17,65 @@ with open('SPARQL-typologies.txt', 'r') as f:
     query = f.read()
     f.close()
 
+
+
+
 # Retrieves monuments in contest
 print("Retrieves monuments in contest")
 query_wlm = ''
 with open('SPARQL-contest.txt', 'r') as f:
     query_wlm = f.read()
     f.close()
-
 # performs request
 r = requests.get(
     url, params={'format': 'json', 'query': query_wlm})
 data = r.json()
-
 # stores data as it is
 with open('data/Q0-monuments-in-contest.json', 'w', encoding='utf-8') as f:
     json.dump(data, f, ensure_ascii=False, indent=4)
     f.close()
-    
+# sleeps
 print("Sleeps 5 seconds...")
 time.sleep(5)
+
+# Retrieves fortifications in contest
+print("Retrieves fortifications in contest")
+query_wlm = ''
+with open('SPARQL-fortifications.txt', 'r') as f:
+    query_wlm = f.read()
+    f.close()
+# performs request
+r = requests.get(
+    url, params={'format': 'json', 'query': query_wlm})
+data = r.json()
+# stores data as it is
+with open('data/Q0-fortifications-in-contest.json', 'w', encoding='utf-8') as f:
+    json.dump(data, f, ensure_ascii=False, indent=4)
+    f.close()
+# sleeps
+print("Sleeps 5 seconds...")
+time.sleep(5)
+
+# Retrieves municipalities-views
+print("Retrieves municipalities-views in contest")
+query_wlm = ''
+with open('SPARQL-municipalities-views.txt', 'r') as f:
+    query_wlm = f.read()
+    f.close()
+# performs request
+r = requests.get(
+    url, params={'format': 'json', 'query': query_wlm})
+data = r.json()
+# stores data as it is
+with open('data/Q0-municipalities-views-in-contest.json', 'w', encoding='utf-8') as f:
+    json.dump(data, f, ensure_ascii=False, indent=4)
+    f.close()
+# sleeps
+print("Sleeps 5 seconds...")
+time.sleep(5)
+
+
+
 
 # Preparing requests
 print("Preparing requests...")
