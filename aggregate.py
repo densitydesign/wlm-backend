@@ -23,7 +23,7 @@ intervals = [
 dateInterval = "1months"
 
 timeDetails = {
-    "12monts": 1,
+    "12months": 1,
     "6months": 2,
     "4months": 3,
     "3months": 4,
