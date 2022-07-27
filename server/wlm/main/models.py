@@ -37,6 +37,6 @@ class Picture(models.Model):
 
 
 class Snapshot(models.Model):
-    data = models.JSONField(default=dict)
     timestamp = models.DateTimeField(auto_now_add=True)
+    data = models.JSONField(default=dict)
 
