@@ -3,6 +3,17 @@ from itertools import groupby
 import sys
 import datetime
 
+# variables
+dateInterval = "12months"
+print("date interval", dateInterval)
+aggregation_type = "municipality"
+print("aggregation by", aggregation_type)
+filter_area = {
+    "area_type": "province",
+    "area_name": "Milano"
+}
+collect_monuments = False
+
 years = [2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022]
 
 intervals = [
@@ -20,8 +31,6 @@ intervals = [
     [12, 31],
 ]
 
-dateInterval = "1months"
-
 timeDetails = {
     "12months": 1,
     "6months": 2,
@@ -37,8 +46,6 @@ for year in years:
         date = [year, intervals[i-1][0], intervals[i-1][1]]
         dates.append(date)
 
-# sys.exit()
-
 datetimes = list(map(lambda d: datetime.datetime(d[0], d[1], d[2]), dates))
 
 with open('data/all_monuments_places_first_revs.json') as f:
@@ -52,6 +59,7 @@ for m in data:
         if len(m["commonsPicturesWLM"]) > 0:
             m["category"] = "photographed"
 
+
 def format_data(data):
     for monument in data:
 
@@ -64,7 +72,8 @@ def format_data(data):
         if len(monument['start_n']):
             dates = sorted(monument['start_n'])
             d = dates[0].split('T')[0].split('-')
-            date_authorinzation = datetime.datetime(int(d[0]), int(d[1]), int(d[2]))
+            date_authorinzation = datetime.datetime(
+                int(d[0]), int(d[1]), int(d[2]))
             monument["date_authorization"] = date_authorinzation
         if len(monument['commonsPicturesWLM']):
             try:
@@ -84,14 +93,14 @@ def format_data(data):
             monument["date_first_pic"] = date_first_pic
     return data
 
+
 def nest_categories(data, counted=True, key="category"):
     results = []
     group_sorted = sorted(data, key=lambda d: d[key])
     for k, g in groupby(group_sorted, lambda d: d[key]):
-        # print(k)
         nested = list(g)
         if counted:
-            nested =  len(nested)
+            nested = len(nested)
         temp = {
             "key": k,
             "values": nested
@@ -99,19 +108,13 @@ def nest_categories(data, counted=True, key="category"):
         results.append(temp)
     return results
 
+
 formatted_data = format_data(data)
-
-aggregation_type = "province"
-print("aggregation by", aggregation_type)
-
-filter_area = {
-    "area_type": "region",
-    "area_name": "Lombardia"
-}
 
 if filter_area:
     print("filter:", filter_area["area_type"], filter_area["area_name"])
-    formatted_data = list(filter(lambda d: d[filter_area["area_type"]] == filter_area["area_name"], formatted_data))
+    formatted_data = list(filter(
+        lambda d: d[filter_area["area_type"]] == filter_area["area_name"], formatted_data))
 else:
     print("no filter set")
 
@@ -124,13 +127,14 @@ data = []
 
 # print(json.dumps(nested_data[0], indent=4, default=str))
 
-for region in nested_data:
+for region in nested_data[0:1]:
     region_name = region["key"]
     region_values = region["values"]
 
     temp_monument = region_values[0]
 
-    region_data = [region_name, [], aggregation_type, [temp_monument["region"],temp_monument["province"],temp_monument["municipality"]]]
+    region_data = [region_name, [], aggregation_type, [
+        temp_monument["region"], temp_monument["province"], temp_monument["municipality"]]]
     # print("region_name", region_name)
 
     for date in datetimes:
@@ -187,6 +191,8 @@ for region in nested_data:
             "valueIncremental": len(m) + len(a) + len(p),
             "valueDistinct": len(m)
         }
+        if (collect_monuments):
+            temp_mapped["monuments"] = m
 
         temp_authorized = {
             # "date": date,
@@ -196,6 +202,8 @@ for region in nested_data:
             "valueIncremental": len(a) + len(p),
             "valueDistinct": len(a)
         }
+        if (collect_monuments):
+            temp_authorized["monuments"] = a
 
         temp_photographed = {
             # "date": date,
@@ -205,18 +213,21 @@ for region in nested_data:
             "valueIncremental": len(p),
             "valueDistinct": len(p)
         }
+        if (collect_monuments):
+            temp_photographed["monuments"] = p
 
         snapshot_data[1].append(temp_mapped)
         snapshot_data[1].append(temp_authorized)
         snapshot_data[1].append(temp_photographed)
 
         region_data[1].append(snapshot_data)
-    
+
     data.append(region_data)
 
 # print("data", json.dumps(data, indent=4))
 
-filename = 'data/aggregated/interval-' + dateInterval + '.aggregation-' + aggregation_type
+filename = 'data/aggregated/interval-' + \
+    dateInterval + '.aggregation-' + aggregation_type
 if filter_area:
     filename += '.filter-' + filter_area["area_name"]
 filename += '.json'
