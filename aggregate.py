@@ -12,7 +12,7 @@ filter_area = {
     "area_type": "province",
     "area_name": "Milano"
 }
-collect_monuments = False
+collect_monuments = True
 
 years = [2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022]
 
@@ -230,6 +230,8 @@ filename = 'data/aggregated/interval-' + \
     dateInterval + '.aggregation-' + aggregation_type
 if filter_area:
     filename += '.filter-' + filter_area["area_name"]
+if collect_monuments:
+    filename += '.withMonuments'
 filename += '.json'
 
 with open(filename, 'w', encoding='utf-8') as f:
