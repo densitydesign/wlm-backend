@@ -4,17 +4,28 @@ import sys
 import datetime
 
 # variables
-dateInterval = "12months"
+yearsRange = [2016, 2017]
+print("years range", yearsRange)
+dateInterval = "campaign5days"
 print("date interval", dateInterval)
-aggregation_type = "municipality"
+aggregation_type = "region"
 print("aggregation by", aggregation_type)
 filter_area = {
-    "area_type": "province",
-    "area_name": "Firenze"
+    # "area_type": "province",
+    # "area_name": "Firenze"
 }
-collect_monuments = True
+collect_monuments = False
 
 years = [2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022]
+years = list(filter(lambda y: y >= yearsRange[0] and y < yearsRange[1], years))
+
+intervalsCampaign = []
+day = 0
+while (day < 30):
+    day += 1
+    date = [9, day]
+    intervalsCampaign.append(date)
+intervalsCampaign.append([10,1])
 
 intervals = [
     [1, 31],
@@ -31,20 +42,34 @@ intervals = [
     [12, 31],
 ]
 
-timeDetails = {
+timeIntervals = {
     "12months": 1,
     "6months": 2,
     "4months": 3,
     "3months": 4,
     "1months": 12,
 }
-interval = int(len(intervals)/timeDetails[dateInterval])
 
 dates = []
-for year in years:
-    for i in range(0, len(intervals), interval):
-        date = [year, intervals[i-1][0], intervals[i-1][1]]
-        dates.append(date)
+if (dateInterval == "campaign"):
+    for year in years:
+        for interval in intervalsCampaign:
+            date = [year, interval[0], interval[1]]
+            dates.append(date)
+elif (dateInterval== "campaign5days"):
+    for year in years:
+        for i in range(0, len(intervalsCampaign), 5):
+            interval = intervalsCampaign[i]
+            date = [year, interval[0], interval[1]]
+            dates.append(date)
+else:
+    interval = int(len(intervals)/timeIntervals[dateInterval])
+    for year in years:
+        for i in range(0, len(intervals), interval):
+            date = [year, intervals[i-1][0], intervals[i-1][1]]
+            dates.append(date)
+
+# print(dates)
 
 datetimes = list(map(lambda d: datetime.datetime(d[0], d[1], d[2]), dates))
 
@@ -226,8 +251,7 @@ for region in nested_data:
 
 # print("data", json.dumps(data, indent=4))
 
-filename = 'data/aggregated/interval-' + \
-    dateInterval + '.aggregation-' + aggregation_type
+filename = 'data/aggregated/yearsRange-'+str(yearsRange[0])+'-'+str(yearsRange[1])+'.interval-' + dateInterval + '.aggregation-' + aggregation_type
 if filter_area:
     filename += '.filter-' + filter_area["area_name"]
 if collect_monuments:
