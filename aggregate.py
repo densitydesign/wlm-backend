@@ -4,9 +4,9 @@ import sys
 import datetime
 
 # variables
-yearsRange = [2016, 2017]
+yearsRange = [2012, 2023]
 print("years range", yearsRange)
-dateInterval = "campaign5days"
+dateInterval = "12months"
 print("date interval", dateInterval)
 aggregation_type = "region"
 print("aggregation by", aggregation_type)
@@ -17,7 +17,7 @@ filter_area = {
 collect_monuments = False
 
 years = [2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022]
-years = list(filter(lambda y: y >= yearsRange[0] and y < yearsRange[1], years))
+years = list(filter(lambda y: y >= yearsRange[0] and y <= yearsRange[1], years))
 
 intervalsCampaign = []
 day = 0
