@@ -68,6 +68,7 @@ with open('types_to_search.json') as types_to_search:
 
     # Include monuments participating into the contest
     data.append({"q_number": "Q0", "label": "monuments-in-contest"})
+    data.append({"q_number": "Q0", "label": "fortifications-in-contest"})
 
     for entity_searched in data:
         # e.g., { "q_number": "Q2232001", "label": "grotta turistica" }
