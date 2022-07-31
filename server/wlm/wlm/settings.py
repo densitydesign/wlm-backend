@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.gis',
     'rest_framework',
     'main',
 ]
@@ -77,10 +78,15 @@ WSGI_APPLICATION = 'wlm.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': 'wlm',
+        'USER': 'wlm',
+        'PASSWORD': 'wlm',
+        'HOST': 'localhost',
+        'PORT': '5433',
     }
 }
+SPATIALITE_LIBRARY_PATH='/usr/local/lib/mod_spatialite.dylib'
 
 
 # Password validation
@@ -123,3 +129,24 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+LOGGING = {
+    'version': 1,                       # the dictConfig format version
+    'disable_existing_loggers': False,  # retain the default loggers
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+}
+
+
+try:
+    from .localsettings import * # noqa
+except ImportError:
+    pass

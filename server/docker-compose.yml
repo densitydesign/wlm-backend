@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+
+  db:
+    image: postgis/postgis:13-master
+    volumes:
+      - ./dockerdata/db:/var/lib/postgresql/data
+    environment:
+      #Environment variable for creating DB user and DB
+      POSTGRES_USER: wlm
+      POSTGRES_PASSWORD: wlm
+      POSTGRES_DB: wlm
+    restart: always
+    ports:
+      - 5433:5432

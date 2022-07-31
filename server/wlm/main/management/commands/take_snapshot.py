@@ -6,11 +6,12 @@ class Command(BaseCommand):
     help = 'Takes new snapshot'
 
     def add_arguments(self, parser):
+        parser.add_argument('--skip-pictures', action='store_true', required=False)
+        parser.add_argument('--skip-geo', action='store_true', required=False)
         parser.add_argument('--dry-run', action='store_true', required=False)
 
     def handle(self, *args, **options):
-        print("take_snapshot")
-        print(options)
+        take_snapshot(skip_pictures=options['skip_pictures'], skip_geo=options['skip_geo'])
 
 
 

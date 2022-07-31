@@ -6,11 +6,13 @@ class Command(BaseCommand):
     help = 'Updates geo data and link from monuments to municipalities'
 
     def add_arguments(self, parser):
+        parser.add_argument('regions_path', type=str)
+        parser.add_argument('provinces_path', type=str)
+        parser.add_argument('municipalities_path', type=str)
         parser.add_argument('--dry-run', action='store_true', required=False)
 
     def handle(self, *args, **options):
-        print("update_geo")
-        print(options)
+        update_geo(options['regions_path'], options['provinces_path'], options['municipalities_path'])
 
 
 
