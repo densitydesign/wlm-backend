@@ -18,10 +18,9 @@ WHERE {
   # seleziona i monumenti partecipanti a WLM in Italia
   ?mon wdt:P131* wd:Q38;
         p:P2186 ?wlms.
-  
-  # esclude i comuni dalla lista
-  MINUS { ?mon wdt:P31 wd:Q747074. }
-  MINUS { ?mon wdt:P31 wd:Q954172. }
+        
+  # restringe ai soli comuni
+  {?mon wdt:P31 wd:Q747074.} UNION {?mon wdt:P31 wd:Q954172.}
   
   ?wlms ps:P2186 ?wlm.
   
@@ -40,8 +39,6 @@ WHERE {
   OPTIONAL { ?mon wdt:P361 ?parent }
   OPTIONAL { ?mon wdt:P18 ?relevantImage . }
   OPTIONAL { ?mon wdt:P373 ?commonsCat . }
-  
-
 }
 
 GROUP BY ?mon ?monLabel ?dateeee

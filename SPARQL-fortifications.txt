@@ -18,6 +18,9 @@ WHERE {
   # seleziona i monumenti partecipanti a WLM in Italia
   ?mon wdt:P131* wd:Q38;
         p:P2186 ?wlms.
+        
+  # seleziona solo i monumenti approvati da Istituto Italiano dei Castelli
+  ?wlms pq:P790 wd:Q85864317.
   
   # esclude i comuni dalla lista
   MINUS { ?mon wdt:P31 wd:Q747074. }
