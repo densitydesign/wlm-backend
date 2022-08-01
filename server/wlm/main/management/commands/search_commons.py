@@ -1,5 +1,5 @@
 from turtle import update
-from main.sparql import search_commons
+from main.wiki_api import search_commons
 from main.helpers import update_image
 from main.models import Monument
 from django.core.management.base import BaseCommand, CommandError
@@ -10,14 +10,18 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('q', type=str)
+        parser.add_argument('--wiki', action='store_true', default=False)
+        parser.add_argument('--update', action='store_true', default=False)
 
     def handle(self, *args, **options):
         
-        out = search_commons(options['q'])
-
-        mon = Monument.objects.get(q_number=options['q'])
-        for image in out:
-            update_image(mon, image, "commons")
+        out = search_commons(options['q'], options['wiki'])
+        print(out)
+        
+        if not options['wiki'] and options['update']:
+            mon = Monument.objects.get(q_number=options['q'])
+            for image in out:
+                update_image(mon, image, "commons")
 
         
 

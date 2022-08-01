@@ -1,5 +1,10 @@
+import re
+import requests
+import io
+import zipfile
 import logging
 from datetime import datetime
+from unicodedata import category
 from dateutil.relativedelta import relativedelta
 from rest_framework.exceptions import APIException
 
@@ -8,15 +13,17 @@ from django.db import transaction, models
 from django.forms import ValidationError
 from django.utils.timezone import make_aware
 from django.contrib.gis.geos import Point
-from main.sparql import (
-    get_wlm_monuments,
-    get_wiki_monuments_entity,
+from main.wiki_api import (
     format_monument,
+    WLM_QUERIES,
     WIKI_CANDIDATE_TYPES,
     search_commons,
-    get_revision
+    get_revision,
+    get_query_template_typologies,
+    get_wlm_query,
+    execute_query,
 )
-from main.models import Monument, CategorySnapshot, Picture, Region, Province, Municipality, Category
+from main.models import Monument, Picture, Region, Province, Municipality, Category, CategorySnapshot, Snapshot
 
 
 logger = logging.getLogger(__name__)
@@ -29,7 +36,6 @@ def get_date_snap(monuments_qs, date):
             first_image=models.Min('image_date')
         ).values('first_image')[:1]
 
-
     out = monuments_qs.annotate(
         first_image=models.Subquery(first_image),
     ).annotate(
@@ -39,7 +45,7 @@ def get_date_snap(monuments_qs, date):
             default=models.Value(0),
         ),
         authorized = models.Case(
-            models.When(start_n__lte=date, then=models.Value(1)),
+            models.When(start__lte=date, then=models.Value(1)),
             default=models.Value(0),
         ),
         with_pictures = models.Case(
@@ -108,8 +114,9 @@ def monument_prop(monument_data, prop, default=None):
 
 def update_image(monument, image_data, image_type):
     image_id = image_data.get("pageid", None)
+    image_title = image_data.get("title", "")
     
-    image_url = get_img_url(image_data.get("title", ""))
+    image_url = get_img_url(image_title)
     image_date_str = image_data.get("DateTime", None)
     if image_date_str:
         image_date = make_aware(datetime.fromisoformat(image_date_str))
@@ -122,17 +129,14 @@ def update_image(monument, image_data, image_type):
     try:
         picture = Picture.objects.get(image_id=image_id)
         Picture.objects.filter(pk=picture.pk).update(
-           monument=monument, image_url=image_url, image_date=image_date, image_type=image_type, data=image_data
+           image_type=image_type, monument=monument, image_date=image_date, image_url=image_url,
+           image_title=image_title, data=image_data, 
         )
     except Picture.DoesNotExist:
-        try:
-            picture = Picture.objects.create(
-                image_id=image_id, image_type=image_type, monument=monument, image_date=image_date, image_url=image_url,
-                data=image_data
-            )
-        except:
-            print(image_data)
-            raise
+        picture = Picture.objects.create(
+            image_id=image_id, image_type=image_type, monument=monument, image_date=image_date, image_url=image_url,
+            image_title=image_title, data=image_data
+        )
     
     return picture
 
@@ -140,16 +144,32 @@ def update_image(monument, image_data, image_type):
 def parse_point(point_str):
     return point_str.upper().replace("POINT(", "").replace(")", "").split(" ")
 
-def update_monument(monument_data, label, q_number, skip_pictures=False, skip_geo=False):
+def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_geo=False):
+    category = category_snapshot.category
+    label = category.label
+
     code = monument_data.get("mon", None)
     if not code:
         raise ValueError("CANNOT UPDATE MONUMENT")
+
+    try:
+        monument = Monument.objects.get(q_number=code)
+        if monument.snapshot == category_snapshot.snapshot:
+            logger.log(logging.INFO, f"Skipping monument {code}")
+            return monument
+
+    except Monument.DoesNotExist:
+        monument = Monument.objects.create(q_number=code)
+
     logger.log(logging.INFO, f"Updating monument {code}")
 
     label = monument_prop(monument_data, "monLabel", "")
     wlm_n = monument_prop(monument_data, "wlm_n", "")
-    start_n = monument_prop(monument_data, "start_n", None)
-    end_n = monument_prop(monument_data, "end_n", None)
+    start = monument_prop(monument_data, "start", None)
+    end = monument_prop(monument_data, "end_n", None)
+    parent_q_number =  monument_prop(monument_data, "parent_n", "")
+
+    relevant_images = monument_data.get("relevantImage_n", [])
 
 
     place_geo_n = monument_prop(monument_data, "place_geo_n", None)
@@ -161,13 +181,6 @@ def update_monument(monument_data, label, q_number, skip_pictures=False, skip_ge
         position = Point(float(lng), float(lat))
     except Exception as e:
         position = None    
-
-    try:
-        monument = Monument.objects.get(q_number=code)
-
-    except Monument.DoesNotExist:
-        monument = Monument.objects.create(q_number=code)
-
 
     municipality = getattr(monument, 'municipality', None)
     province = getattr(monument, 'province', None)
@@ -184,73 +197,108 @@ def update_monument(monument_data, label, q_number, skip_pictures=False, skip_ge
         except Municipality.DoesNotExist:
             pass
 
-    first_revision = get_revision(code)
-        
+    if not monument.pk:
+        first_revision = get_revision(code)
+    else:
+        first_revision = monument.first_revision
 
     Monument.objects.filter(pk=monument.pk).update(
         label=label,
         wlm_n=wlm_n,
-        start_n=start_n,
-        end_n=end_n,
+        start=start,
+        end=end,
         position=position,
         municipality = municipality,
         province = province,
         region = region,
         data=monument_data,
         first_revision=first_revision,
+        snapshot=category_snapshot.snapshot,
+        parent_q_number=parent_q_number,
+        relevant_images=relevant_images,
     )
 
-    cat, cat_created = Category.objects.get_or_create(label=label, q_number=q_number)
-    monument.categories.add(cat)
-
+    monument.categories.add(category)
 
     if not skip_pictures:
         logger.info(f"Updating pictures for {code}")
         images = search_commons(code)
         for image in images:
-            update_image(monument, image, 'commons')
+            update_image(monument, image, 'wlm')
 
     return monument
 
 
-@transaction.atomic
-def update_category(monuments, label, q_number, skip_pictures=False, skip_geo=False):
+def update_category(monuments, category_snapshot, skip_pictures=False, skip_geo=False):
     for monument in monuments:
-        update_monument(monument, label, q_number, skip_pictures=skip_pictures, skip_geo=skip_geo)
-    CategorySnapshot.objects.get_or_create(label=label, q_number=q_number)
+        update_monument(monument, category_snapshot, skip_pictures=skip_pictures, skip_geo=skip_geo)
+    
+
+def process_category_snapshot(cat_snapshot, skip_pictures=False, skip_geo=False):
+    if not cat_snapshot.payload:
+        results = execute_query(cat_snapshot.query)
+        data = results["results"]["bindings"]
+        cat_snapshot.payload = data
+        cat_snapshot.save()
+    monuments = [format_monument(x) for x in cat_snapshot.payload]
+    update_category(monuments, cat_snapshot, skip_pictures=skip_pictures, skip_geo=skip_geo)
+    
 
 
-def take_snapshot(skip_pictures=False, skip_geo=False):
+def take_snapshot(skip_pictures=False, skip_geo=False, force_new_snapshot=False):
     """
     New monuments + Update to monuments data
     New Approved/Unapproved monuments
     New pictures
     Aggregate data on geographic entities #TODO: evaluate on-the-fly aggregation with aggressive caching (break on import and pre-caching)
     """
+    pending_snapshots = Snapshot.objects.filter(complete=False).order_by('-created')
+    if not pending_snapshots.exists():
+        logger.info("No pending snapshots")
+        snapshot = Snapshot.objects.create()
+    else:
+        snapshot = pending_snapshots[0]     
+        Snapshot.objects.exclude(pk=snapshot.pk).filter(complete=False).delete()
 
-    try:
-        wlm_monuments = [format_monument(monument_data) for monument_data in get_wlm_monuments()]
-        update_category(wlm_monuments, "monuments-in-contest", "Q0", skip_pictures=skip_pictures, skip_geo=skip_geo)
-    except Exception as e:
-        raise
-        pass
-    
-    
-    for item in WIKI_CANDIDATE_TYPES:
-        try:
-            logger.info(f"loading category {item['label']}")
-            monument_results = [format_monument(monument_data) for monument_data in get_wiki_monuments_entity(item)]
-            update_category(monument_results, item["label"], item["q_number"], skip_pictures=skip_pictures, skip_geo=skip_geo)
-        except Exception as e:
-            raise
+    categories_snapshots = []
+    #creating CategorySnapshot
+    for item in WLM_QUERIES + WIKI_CANDIDATE_TYPES:
+        category = Category.objects.get_or_create({'label': item['label'], 'q_number': item['q_number']})[0]
+        if "query_file" in item:
+            query = get_wlm_query(item['query_file'])
+        else:
+            typologies_query = get_query_template_typologies()
+            type_to_search = "wd:" + item["q_number"] + " # " + item["label"]
+            query = re.sub("wd:Q_NUMBER_TYPE", type_to_search, typologies_query)
+        
+        cat_snapshot = CategorySnapshot.objects.get_or_create(category=category, snapshot=snapshot, query=query)[0]
+        categories_snapshots.append(cat_snapshot)
+
+
+    for cat_snapshot in categories_snapshots:
+        if cat_snapshot.complete:
+            continue
+        process_category_snapshot(cat_snapshot, skip_pictures=skip_pictures, skip_geo=skip_geo)
+        cat_snapshot.complete = True
+        cat_snapshot.save()
+
+    #fixing empty positions
+    for monument in Monument.objects.filter(position=None).exclude(parent_q_number=""):
+        if monument.parent_q_number:
+            try:
+                parent_monument = Monument.objects.get(q_number=monument.parent_q_number)
+                monument.position = parent_monument.position
+                monument.save()
+            except Monument.DoesNotExist:
+                pass
+
+    snapshot.complete = True
+    snapshot.save()
+    snapshot.category_snapshots.all().delete()
 
 
 
 
-
-import requests
-import io
-import zipfile
 def download_extract_zip(url):
     """
     Download a ZIP file and extract its contents in memory

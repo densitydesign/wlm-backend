@@ -1,5 +1,5 @@
 from turtle import update
-from main.sparql import get_revision
+from main.wiki_api import get_revision
 from main.helpers import update_image
 from main.models import Monument
 from django.core.management.base import BaseCommand, CommandError

@@ -29,6 +29,17 @@ WIKI_CANDIDATE_TYPES = [
     #{"q_number": "Q24398318", "label": "edificio religioso"},
 ]
 
+WLM_QUERIES = [
+    {"label": "contest", "query_file" : "SPARQL-contest.txt", "q_number": "Q0"},
+]
+
+def get_wlm_query(query_file):
+    SPARQL_CONTEST_PATH = CURRENT_DIR / query_file
+    with open(SPARQL_CONTEST_PATH, "r") as f:
+        QUERY_TEMPLATE = f.read()
+        f.close()
+    return QUERY_TEMPLATE
+
 
 def get_query_template_typologies():
     SPARQL_TYPOLOGIES_PATH = CURRENT_DIR / "SPARQL-typologies.txt"
@@ -110,16 +121,23 @@ def format_monument(monument):
     return monument
 
 
-def search_commons(wlm_id):
+def search_commons(id, is_commons=False):
     params = {
         "action": "query",
         "format": "json",
         "prop": "imageinfo",
         "generator": "search",
         "iiprop": "extmetadata",
-        "gsrsearch": '"' + wlm_id + '"',
+        
         "gsrnamespace": "6",
     }
+
+    if not is_commons:
+        params["gsrsearch"] = '"' + id + '"',
+    else:
+        params["titles"] = '"' + id + '"',
+        
+
     r = requests.get(COMMONS_URL, params)
     data = r.json()
     if "query" in data and "pages" in data["query"] and len(data["query"]["pages"]) > 0:
