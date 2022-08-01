@@ -333,12 +333,20 @@ def update_geo(regions_path, provices_path, municipalities_path):
     update_municipalities(municipalities_path)
 
     provinces = Province.objects.all()
+    provinces_by_code = {}
+    regions_by_code = {}
     for province in provinces:
+        logger.info(f"update province {province.name}")
         province.region = Region.objects.get(code=province.region_code)
+        provinces_by_code[province.code] = province
+        regions_by_code[province.region_code] = province.region
         province.save()
 
+    updated_municipalities = []
     municipalities = Municipality.objects.all()
     for municipality in municipalities:
-        municipality.province = Province.objects.get(code=municipality.province_code)
-        municipality.region = Region.objects.get(code=municipality.region_code)
-        municipality.save()
+        logger.info(f"update municipality {municipality.name}")
+        municipality.province = provinces_by_code[municipality.province_code]
+        municipality.region = regions_by_code[municipality.region_code]
+        updated_municipalities.append(municipality)
+    Municipality.objects.bulk_update(updated_municipalities, ['province', 'region'])
