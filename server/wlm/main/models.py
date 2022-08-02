@@ -48,7 +48,7 @@ class Province(models.Model):
     region_code = models.IntegerField()
     poly = models.MultiPolygonField(blank=True, null=True)
 
-    region = models.ForeignKey(Region, models.SET_NULL, blank=True,  null=True)
+    region = models.ForeignKey(Region, models.SET_NULL, blank=True,  null=True, related_name="provinces")
 
     def __str__(self):
         return self.name
@@ -61,8 +61,8 @@ class Municipality(models.Model):
     region_code = models.IntegerField()
     poly = models.MultiPolygonField(blank=True, null=True)
 
-    province = models.ForeignKey(Province, models.SET_NULL, blank=True,  null=True)
-    region = models.ForeignKey(Region, models.SET_NULL, blank=True,  null=True)
+    province = models.ForeignKey(Province, models.SET_NULL, blank=True,  null=True, related_name='municipalities')
+    region = models.ForeignKey(Region, models.SET_NULL, blank=True,  null=True, related_name="municipalities")
 
     def __str__(self):
         return self.name

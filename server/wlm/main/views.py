@@ -2,7 +2,10 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from main.models import (Region, Province, Municipality, Monument, MonumentAuthorization, Picture)
-from main.serializers import (RegionSerializer, ProvinceSerializer, MunicipalitySerializer, MonumentSerializer, MonumentSmallSerializer, MonumentAuthorizationSerializer, PictureSerializer, WLMQuerySerializer)
+from main.serializers import (RegionSerializer, RegionGeoSerializer,
+     ProvinceSerializer, MunicipalitySerializer, MonumentSerializer, 
+     MonumentSmallSerializer, MonumentAuthorizationSerializer, PictureSerializer, 
+     WLMQuerySerializer, ProvinceGeoSerializer, MunicipalityGeoSerializer)
 from main.helpers import get_snap
 
 
@@ -23,8 +26,26 @@ class RegionViewSet(viewsets.ModelViewSet):
     serializer_class = RegionSerializer
 
     @action(methods=["get"], detail=False)
-    def topo(self, request):
-        return self.list(request)
+    def geo(self, request):
+        queryset = self.get_queryset()
+        filtered_queryset = self.filter_queryset(queryset)
+        ser = RegionGeoSerializer(filtered_queryset, many=True)
+        return Response(ser.data)
+
+
+    @action(methods=["get"], detail=True)
+    def geoprovinces(self, request, pk=None):
+        region = self.get_object()
+        ser = ProvinceGeoSerializer(region.provinces.all(), many=True)
+        return Response(ser.data)   
+
+    @action(methods=["get"], detail=True, url_path='geoprovinces/(?P<province_pk>[^/.]+)/geomunicipalities')
+    def geomunicipalities(self, request, pk=None, province_pk=None):
+        region = self.get_object()
+        province = region.provinces.get(pk=province_pk)
+        ser = MunicipalityGeoSerializer(province.municipalities.all(), many=True)
+        return Response(ser.data)   
+        
 
     @action(methods=["get"], detail=True)
     def wlm(self, request, pk=None):
@@ -50,6 +71,20 @@ class ProvinceViewSet(viewsets.ModelViewSet):
     queryset = Province.objects.all()
     serializer_class = ProvinceSerializer
 
+    @action(methods=["get"], detail=False)
+    def geo(self, request):
+        queryset = self.get_queryset()
+        filtered_queryset = self.filter_queryset(queryset)
+        ser = ProvinceGeoSerializer(filtered_queryset, many=True)
+        return Response(ser.data)
+
+    @action(methods=["get"], detail=True)
+    def geomunicipalities(self, request, pk=None):
+        province = self.get_object()
+        ser = MunicipalityGeoSerializer(province.municipalities.all(), many=True)
+        return Response(ser.data)   
+
+
     @action(methods=["get"], detail=True)
     def wlm(self, request, pk=None):
         area = self.get_object()
@@ -62,6 +97,7 @@ class ProvinceViewSet(viewsets.ModelViewSet):
             out['monuments'] = MonumentSmallSerializer(monuments_qs, many=True).data
     
         return Response(out)
+        
 
     @action(methods=["get"], detail=True)
     def monuments(self, request, pk=None):
