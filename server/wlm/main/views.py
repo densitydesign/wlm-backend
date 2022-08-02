@@ -4,10 +4,6 @@ from rest_framework.response import Response
 from main.models import (Region, Province, Municipality, Monument, MonumentAuthorization, Picture)
 from main.serializers import (RegionSerializer, ProvinceSerializer, MunicipalitySerializer, MonumentSerializer, MonumentSmallSerializer, MonumentAuthorizationSerializer, PictureSerializer, WLMQuerySerializer)
 from main.helpers import get_snap
-import datetime
-
-
-
 
 
 def get_history(monuments_qs, query_params):

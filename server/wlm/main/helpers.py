@@ -197,7 +197,7 @@ def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_
         except Municipality.DoesNotExist:
             pass
 
-    if not monument.pk:
+    if not monument.snapshot:
         first_revision = get_revision(code)
     else:
         first_revision = monument.first_revision
@@ -235,7 +235,9 @@ def update_category(monuments, category_snapshot, skip_pictures=False, skip_geo=
     
 
 def process_category_snapshot(cat_snapshot, skip_pictures=False, skip_geo=False):
+    logger.info(f"process_category_snapshot {cat_snapshot.category.label}")
     if not cat_snapshot.payload:
+        logger.info(f"running sparql for {cat_snapshot.category.label}")
         results = execute_query(cat_snapshot.query)
         data = results["results"]["bindings"]
         cat_snapshot.payload = data
@@ -263,7 +265,7 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_new_snapshot=False)
     categories_snapshots = []
     #creating CategorySnapshot
     for item in WLM_QUERIES + WIKI_CANDIDATE_TYPES:
-        category = Category.objects.get_or_create({'label': item['label'], 'q_number': item['q_number']})[0]
+        category = Category.objects.get_or_create(label=item["label"])[0]
         if "query_file" in item:
             query = get_wlm_query(item['query_file'])
         else:
@@ -272,6 +274,7 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_new_snapshot=False)
             query = re.sub("wd:Q_NUMBER_TYPE", type_to_search, typologies_query)
         
         cat_snapshot = CategorySnapshot.objects.get_or_create(category=category, snapshot=snapshot, query=query)[0]
+        logger.info(cat_snapshot)
         categories_snapshots.append(cat_snapshot)
 
 

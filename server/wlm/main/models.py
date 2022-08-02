@@ -30,6 +30,9 @@ class CategorySnapshot(models.Model):
     def has_payload(self):
         return bool(self.payload)
 
+    def __str__(self):
+        return self.category.label
+
 class Region(models.Model):
     name = models.CharField(max_length=200)
     code = models.IntegerField(primary_key=True)

@@ -11,26 +11,28 @@ API_URL = "https://www.wikidata.org/w/api.php"
 
 WIKI_CANDIDATE_TYPES = [
     {"q_number": "Q3950", "label": "villa"},
-    # {"q_number": "Q12518", "label": "torre"},
-    # {"q_number": "Q57821", "label": "Fortificazione"},
-    # {"q_number": "Q179049", "label": "area naturale protetta"},
-    # {"q_number": "Q333109", "label": "Überrest"},
-    # {"q_number": "Q811534", "label": "pianta monumentale"},
-    # {"q_number": "Q1291195", "label": "luogo di scoperta (comprende siti archeologici)"},
-    # {"q_number": "Q2065736", "label": "bene culturale"},
-    # {"q_number": "Q2232001", "label": "grotta turistica"},
-    # {"q_number": "Q4989906", "label": "monumento"},
-    # {"q_number": "Q11331347", "label": "sacro monte"},
-    # {"q_number": "Q15069452", "label": "area protetta Natura 2000"},
-    # {"q_number": "Q35112127", "label": "edificio storico"},
-    # {"q_number": "Q57660343", "label": "performing art buildings"},
-    # {"q_number": "Q1030034", "label": "GLAM"},
-    # {"q_number": "Q16560", "label": "Palazzo"},
-    #{"q_number": "Q24398318", "label": "edificio religioso"},
+    {"q_number": "Q12518", "label": "torre"},
+    {"q_number": "Q57821", "label": "Fortificazione"},
+    {"q_number": "Q179049", "label": "area naturale protetta"},
+    {"q_number": "Q333109", "label": "Überrest"},
+    {"q_number": "Q811534", "label": "pianta monumentale"},
+    {"q_number": "Q1291195", "label": "luogo di scoperta (comprende siti archeologici)"},
+    {"q_number": "Q2065736", "label": "bene culturale"},
+    {"q_number": "Q2232001", "label": "grotta turistica"},
+    {"q_number": "Q4989906", "label": "monumento"},
+    {"q_number": "Q11331347", "label": "sacro monte"},
+    {"q_number": "Q15069452", "label": "area protetta Natura 2000"},
+    {"q_number": "Q35112127", "label": "edificio storico"},
+    {"q_number": "Q57660343", "label": "performing art buildings"},
+    {"q_number": "Q1030034", "label": "GLAM"},
+    {"q_number": "Q16560", "label": "Palazzo"},
+    {"q_number": "Q24398318", "label": "edificio religioso"},
 ]
 
 WLM_QUERIES = [
-    {"label": "contest", "query_file" : "SPARQL-contest.txt", "q_number": "Q0"},
+    {"label": "contest", "query_file" : "SPARQL-contest.txt", "q_number": "W0"},
+    {"label": "municipalities-views", "query_file" : "SPARQL-municipalities-views.txt", "q_number": "W1"},
+    {"label": "fortifications", "query_file" : "SPARQL-fortifications.txt", "q_number": "W2"},
 ]
 
 def get_wlm_query(query_file):
@@ -49,60 +51,13 @@ def get_query_template_typologies():
     return QUERY_TEMPLATE
 
 
-def get_query_template_contest():
-    SPARQL_CONTEST_PATH = CURRENT_DIR / "SPARQL-contest.txt"
-    with open(SPARQL_CONTEST_PATH, "r") as f:
-        QUERY_TEMPLATE = f.read()
-        f.close()
-    return QUERY_TEMPLATE
-
-
 def execute_query(query):
-    r = requests.get(SPARQL_URL, params={"format": "json", "query": query}, timeout=40)
+    r = requests.get(SPARQL_URL, params={"format": "json", "query": query}, timeout=200)
     
     try:
         return r.json()
     except Exception as e:
         raise e
-
-
-def get_wlm_monuments():
-    wlm_query = get_query_template_contest()
-    results = execute_query(wlm_query)
-    return results["results"]["bindings"]
-
-
-def get_wiki_monuments_entity(entity):
-    
-    typologies_query = get_query_template_typologies()
-    type_to_search = "wd:" + entity["q_number"] + " # " + entity["label"]
-    compiled_query = re.sub("wd:Q_NUMBER_TYPE", type_to_search, typologies_query)
-
-    # performs request
-    entity_results = execute_query(compiled_query)
-
-    # stores data as it is
-    if "results" not in entity_results:
-        return []
-    return entity_results["results"]["bindings"]
-
-
-def get_wiki_monuments():
-    out = []
-    for entity in WIKI_CANDIDATE_TYPES:
-        entity_results = get_wiki_monuments_entity(entity)
-        out = out + entity_results
-        time.sleep(5)
-
-    return out
-
-
-def get_monuments():
-    wlm_monuments = [format_monument(mon) for mon in  get_wlm_monuments()]
-    wiki_monuments = [format_monument(mon) for mon in  get_wiki_monuments()]
-    return wlm_monuments + wiki_monuments
-    return wiki_monuments
-    
 
 
 def format_monument(monument):
