@@ -78,7 +78,7 @@ class Municipality(models.Model):
 
 
 class Monument(models.Model):
-    label = models.CharField(max_length=200)
+    label = models.TextField()
     q_number = models.CharField(max_length=200, unique=True)
     parent_q_number = models.CharField(max_length=200, blank=True, default="")
     wlm_n = models.CharField(max_length=200, blank='', default='')
