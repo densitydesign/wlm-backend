@@ -41,6 +41,9 @@ class Region(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        ordering = ['name']
+
 
 class Province(models.Model):
     name = models.CharField(max_length=200)
@@ -52,6 +55,9 @@ class Province(models.Model):
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        ordering = ['name']
 
 
 class Municipality(models.Model):
@@ -66,6 +72,9 @@ class Municipality(models.Model):
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        ordering = ['name']
 
 
 class Monument(models.Model):
@@ -94,13 +103,6 @@ class Monument(models.Model):
 
     def __str__(self):
         return self.label
-
-#TODO :PROBABLY NOT NEEDED (use start_n, end_n)
-class MonumentAuthorization(models.Model):
-    monument = models.ForeignKey(Monument, models.CASCADE)
-    authorized = models.BooleanField()
-    event_date = models.DateField()
-    data = models.JSONField(default=dict)
 
 
 class Picture(models.Model):

@@ -41,12 +41,16 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_gis',
     'drf_spectacular',
+    'corsheaders',
+    'django_rq',
     'main',
+    'cron_tools',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -115,7 +119,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Rome'
 
 USE_I18N = True
 
@@ -145,6 +149,10 @@ LOGGING = {
         'handlers': ['console'],
         'level': 'INFO',
     },
+    'cron': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
 }
 
 REST_FRAMEWORK = {
@@ -165,10 +173,26 @@ SPECTACULAR_SETTINGS = {
 
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
-        'LOCATION': 'my_cache_table',
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379',
     }
 }
+
+RQ_QUEUES = {
+    'default': {
+        'HOST': 'localhost',
+        'PORT': 6379,
+        'DB': 1,
+    },
+}
+
+RQ_SHOW_ADMIN_LINK = True
+
+CRON_JOB_HANLDERS = {
+    'take_snapshot': 'main.job_handlers.enqueue_take_snapshot',
+}
+
+CORS_ALLOW_ALL_ORIGINS = True
 
 
 try:

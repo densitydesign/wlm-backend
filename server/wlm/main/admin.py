@@ -1,11 +1,9 @@
 from django.contrib.gis import admin
-from main.models import (Region, Province, Municipality, Monument, MonumentAuthorization, Picture,  CategorySnapshot, Category, Snapshot)
+from main.models import (Region, Province, Municipality, Monument, Picture,  CategorySnapshot, Category, Snapshot)
 
 admin.site.register(Region)
 admin.site.register(Province)
 admin.site.register(Municipality)
-admin.site.register(Monument)
-admin.site.register(MonumentAuthorization)
 admin.site.register(Category)
 
 
@@ -23,3 +21,10 @@ class CategorySnapshotAdmin(admin.ModelAdmin):
     list_display = ['__str__', 'updated']
 
 admin.site.register(CategorySnapshot, CategorySnapshotAdmin)
+
+
+class MonumentAdmin(admin.ModelAdmin):
+    list_filter = ['region', 'province', 'categories']
+
+
+admin.site.register(Monument, MonumentAdmin)

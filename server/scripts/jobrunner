@@ -1,0 +1,7 @@
+#!/bin/bash
+# Enable env from Docker
+set -a
+source ~/cronenv
+set +a
+# Tick our Django App
+python /code/wlm/manage.py tick

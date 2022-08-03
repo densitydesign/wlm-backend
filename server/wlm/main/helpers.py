@@ -31,7 +31,7 @@ from main.serializers import ProvinceGeoSerializer, MunicipalityGeoSerializer, R
 
 logger = logging.getLogger(__name__)
 
-def get_date_snap(monuments_qs, date):
+def get_date_snap(monuments_qs, date, group=None):
 
     first_image = Picture.objects.filter(
             monument__pk=models.OuterRef('pk'),
@@ -42,7 +42,7 @@ def get_date_snap(monuments_qs, date):
     out = monuments_qs.annotate(
         first_image=models.Subquery(first_image),
     ).annotate(
-        const = models.Value(1),
+        date = models.Value(date),
         mapped = models.Case(
             models.When(first_revision__lte=date, then=models.Value(1)),
             default=models.Value(0),
@@ -55,23 +55,34 @@ def get_date_snap(monuments_qs, date):
             models.When(first_image__lte=date, then=models.Value(1)),
             default=models.Value(0),
         ),
-    ).values('const').order_by().annotate(
+    )
+    
+    if group:
+        values = group if type(group) is list else [group]
+        values = values + ['date']
+    else:
+        values = ['date']
+
+    out = out.values(*values).order_by().annotate(
         mapped=models.Sum('mapped'),
         authorized=models.Sum('authorized'),
         with_pictures=models.Sum('with_pictures'),
-    ).values('mapped', 'authorized', 'with_pictures')
-
-    print("ss", out)
-
-    aggregated_data = out[0]
+    )
     
-    return {
-        "date": date,
-        "aggregated_data": aggregated_data,
-    }
+    values_final = ['mapped', 'authorized', 'with_pictures', 'date']
+    if group:
+        if type(group) is list:
+            values_final += group
+        else:
+            values_final.append(group)
+    
+        
+    out = out.values(*values_final)
+
+    return out
 
 
-def get_snap(monuments_qs, date_from, date_to, step_size=1, step_unit="month"):
+def get_snap(monuments_qs, date_from, date_to, step_size=1, step_unit="month", group=None):
 
 
     start = date_from
@@ -82,13 +93,12 @@ def get_snap(monuments_qs, date_from, date_to, step_size=1, step_unit="month"):
         start += relativedelta(**{step_unit: step_size})
         dates.append(start)
         if len(dates) > 50:
-            raise APIException("Too many dates")
+            raise APIException("Too many dates (max 50)")
 
     
     out = []
     for date in dates:
-        print(monuments_qs)
-        date_snap = get_date_snap(monuments_qs, date)
+        date_snap = get_date_snap(monuments_qs, date, group=group)
         out.append(date_snap)
 
     
@@ -175,9 +185,9 @@ def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_
     relevant_images = monument_data.get("relevantImage_n", [])
 
 
-    place_geo_n = monument_prop(monument_data, "place_geo_n", None)
+    geo_n = monument_prop(monument_data, "geo_n", None)
     try:
-        coords = parse_point(place_geo_n)
+        coords = parse_point(geo_n)
         lng = coords[0]
         lat = coords[1]
         
@@ -317,21 +327,7 @@ def download_extract_zip(url):
                 yield zipinfo.filename, thefile
 
 
-import zipfile, tempfile
 
-# def unzip_regions(path):
-
-#     mapping = {
-#         'name' : 'DEN_REG',
-#         'poly' : 'POLYGON', 
-#     } 
-
-#     with zipfile.ZipFile(path) as thezip:
-#         with tempfile.TemporaryDirectory() as tempdir:
-#             thezip.extractall(tempdir)
-
-
-#             lm = LayerMapping(TestGeo, 'test_poly.shp', mapping)
 
 
 def update_regions(shape_path):

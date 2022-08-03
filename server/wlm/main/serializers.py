@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from main.models import (Region, Province, Municipality, Monument, MonumentAuthorization, Picture)
+from main.models import (Region, Province, Municipality, Monument,  Picture)
 from rest_framework_gis.serializers import GeometryField, GeoFeatureModelSerializer
 
 
@@ -62,12 +62,6 @@ class MonumentSmallSerializer(serializers.ModelSerializer):
     class Meta:
         model = Monument
         fields = ["id", "q_number", "label"]
-
-
-class MonumentAuthorizationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = MonumentAuthorization
-        fields = "__all__" 
 
 
 class PictureSerializer(serializers.ModelSerializer):
