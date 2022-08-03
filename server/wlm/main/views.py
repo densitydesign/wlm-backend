@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -7,6 +8,7 @@ from main.serializers import (RegionSerializer, RegionGeoSerializer,
      MonumentSmallSerializer, MonumentAuthorizationSerializer, PictureSerializer, 
      WLMQuerySerializer, ProvinceGeoSerializer, MunicipalityGeoSerializer)
 from main.helpers import get_snap
+from drf_spectacular.utils import extend_schema
 
 
 def get_history(monuments_qs, query_params):
@@ -27,26 +29,34 @@ class RegionViewSet(viewsets.ModelViewSet):
 
     @action(methods=["get"], detail=False)
     def geo(self, request):
+        cached = cache.get("region_geo")
+        if cached:
+            return Response(cached)
         queryset = self.get_queryset()
-        filtered_queryset = self.filter_queryset(queryset)
-        ser = RegionGeoSerializer(filtered_queryset, many=True)
+        ser = RegionGeoSerializer(queryset, many=True)
         return Response(ser.data)
 
 
     @action(methods=["get"], detail=True)
     def geoprovinces(self, request, pk=None):
         region = self.get_object()
+        cached = cache.get(f"region_geo/{region.code}")
+        if cached:
+            return Response(cached)
         ser = ProvinceGeoSerializer(region.provinces.all(), many=True)
         return Response(ser.data)   
 
-    @action(methods=["get"], detail=True, url_path='geoprovinces/(?P<province_pk>[^/.]+)/geomunicipalities')
-    def geomunicipalities(self, request, pk=None, province_pk=None):
-        region = self.get_object()
-        province = region.provinces.get(pk=province_pk)
-        ser = MunicipalityGeoSerializer(province.municipalities.all(), many=True)
-        return Response(ser.data)   
+    # @action(methods=["get"], detail=True, url_path='geoprovinces/(?P<province_code>[^/.]+)/geomunicipalities')
+    # def geomunicipalities(self, request, pk=None, province_pk=None):
+    #     region = self.get_object()
+    #     province = region.provinces.get(pk=province_pk)
+    #     cached = cache.get(f"province_geo/{province.code}")
+    #     if cached:
+    #         return Response(cached)
+    #     ser = MunicipalityGeoSerializer(province.municipalities.all(), many=True)
+    #     return Response(ser.data)   
         
-
+    @extend_schema(parameters=[WLMQuerySerializer])
     @action(methods=["get"], detail=True)
     def wlm(self, request, pk=None):
         area = self.get_object()
@@ -73,18 +83,24 @@ class ProvinceViewSet(viewsets.ModelViewSet):
 
     @action(methods=["get"], detail=False)
     def geo(self, request):
+        cached = cache.get(f"province_geo")
+        if cached:
+            return Response(cached)
         queryset = self.get_queryset()
-        filtered_queryset = self.filter_queryset(queryset)
-        ser = ProvinceGeoSerializer(filtered_queryset, many=True)
+        ser = ProvinceGeoSerializer(queryset, many=True)
         return Response(ser.data)
 
     @action(methods=["get"], detail=True)
     def geomunicipalities(self, request, pk=None):
         province = self.get_object()
+        cached = cache.get(f"province_geo/{province.code}")
+        if cached:
+            return Response(cached)
         ser = MunicipalityGeoSerializer(province.municipalities.all(), many=True)
         return Response(ser.data)   
 
 
+    @extend_schema(parameters=[WLMQuerySerializer])
     @action(methods=["get"], detail=True)
     def wlm(self, request, pk=None):
         area = self.get_object()
@@ -110,6 +126,7 @@ class MunicipalityViewSet(viewsets.ModelViewSet):
     queryset = Municipality.objects.all()
     serializer_class = MunicipalitySerializer
 
+    @extend_schema(parameters=[WLMQuerySerializer])
     @action(methods=["get"], detail=True)
     def wlm(self, request, pk=None):
         area = self.get_object()

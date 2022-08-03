@@ -1,3 +1,4 @@
+from django.core.cache import cache
 import re
 import requests
 import io
@@ -7,6 +8,7 @@ from datetime import datetime
 from unicodedata import category
 from dateutil.relativedelta import relativedelta
 from rest_framework.exceptions import APIException
+from django.test import Client, RequestFactory
 
 from django.contrib.gis.utils import LayerMapping
 from django.db import transaction, models
@@ -24,6 +26,7 @@ from main.wiki_api import (
     execute_query,
 )
 from main.models import Monument, Picture, Region, Province, Municipality, Category, CategorySnapshot, Snapshot
+from main.serializers import ProvinceGeoSerializer, MunicipalityGeoSerializer, RegionGeoSerializer
 
 
 logger = logging.getLogger(__name__)
@@ -401,3 +404,29 @@ def update_geo(regions_path, provices_path, municipalities_path):
         municipality.region = regions_by_code[municipality.region_code]
         updated_municipalities.append(municipality)
     Municipality.objects.bulk_update(updated_municipalities, ['province', 'region'])
+
+
+def update_geo_cache():
+    """
+    """
+    regions = Region.objects.all()
+    regions_geo = RegionGeoSerializer(regions, many=True).data
+    cache.set("region_geo", regions_geo, None)
+
+    regions = Region.objects.all()
+    for region in regions:
+        logger.info(f"update cache region provinces {region.name}")
+        provinces = region.provinces.all()
+        provinces_geo = ProvinceGeoSerializer(provinces, many=True).data
+        cache.set(f"region_geo/{region.code}", provinces_geo, None)
+        
+    provinces = Province.objects.all()
+    provinces_geo = ProvinceGeoSerializer(provinces, many=True).data
+    cache.set(f"province_geo", provinces_geo, None)
+
+    for province in provinces:
+        logger.info(f"update cache province municipalities {province.name}")
+        municipalities = province.municipalities.all()
+        municipalities_geo = MunicipalityGeoSerializer(municipalities, many=True).data
+        cache.set(f"province_geo/{province.code}", municipalities_geo, None)    
+        

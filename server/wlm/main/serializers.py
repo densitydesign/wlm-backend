@@ -17,6 +17,7 @@ class RegionGeoSerializer(GeoFeatureModelSerializer):
         model = Region
         fields = ["name", "code"]
         geo_field = "poly"
+        id_field = False
         
 
 class ProvinceSerializer(serializers.ModelSerializer):
@@ -32,6 +33,7 @@ class ProvinceGeoSerializer(GeoFeatureModelSerializer):
         model = Province
         fields = ["name", "code"]
         geo_field = "poly"
+        id_field = False
 
 
 class MunicipalitySerializer(serializers.ModelSerializer):
@@ -48,6 +50,7 @@ class MunicipalityGeoSerializer(GeoFeatureModelSerializer):
         model = Municipality
         fields = ["name", "code"]
         geo_field = "poly"
+        id_field = False
 
 
 class MonumentSerializer(serializers.ModelSerializer):
