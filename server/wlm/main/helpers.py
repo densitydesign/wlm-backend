@@ -178,7 +178,7 @@ def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_
 
     label = monument_prop(monument_data, "monLabel", "")
     wlm_n = monument_prop(monument_data, "wlm_n", "")
-    start = monument_prop(monument_data, "start", None)
+    start = monument_prop(monument_data, "start_n", None)
     end = monument_prop(monument_data, "end_n", None)
     parent_q_number =  monument_prop(monument_data, "parent_n", "")
 
