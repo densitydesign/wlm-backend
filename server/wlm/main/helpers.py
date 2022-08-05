@@ -27,6 +27,7 @@ from main.wiki_api import (
 )
 from main.models import Monument, Picture, Region, Province, Municipality, Category, CategorySnapshot, Snapshot
 from main.serializers import ProvinceGeoSerializer, MunicipalityGeoSerializer, RegionGeoSerializer
+from django.contrib.gis.db.models.functions import Centroid
 
 
 logger = logging.getLogger(__name__)
@@ -400,6 +401,11 @@ def update_geo(regions_path, provices_path, municipalities_path):
         municipality.region = regions_by_code[municipality.region_code]
         updated_municipalities.append(municipality)
     Municipality.objects.bulk_update(updated_municipalities, ['province', 'region'])
+
+    #updating centroids
+    Region.objects.all().annotate(c=Centroid('poly')).update(centroid=models.F('c'))
+    Province.objects.all().annotate(c=Centroid('poly')).update(centroid=models.F('c'))
+    Municipality.objects.all().annotate(c=Centroid('poly')).update(centroid=models.F('c'))
 
 
 def update_geo_cache():

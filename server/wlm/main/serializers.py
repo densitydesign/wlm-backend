@@ -15,7 +15,7 @@ class RegionGeoSerializer(GeoFeatureModelSerializer):
 
     class Meta:
         model = Region
-        fields = ["name", "code"]
+        fields = ["name", "code", "centroid"]
         geo_field = "poly"
         id_field = False
         
@@ -31,7 +31,7 @@ class ProvinceGeoSerializer(GeoFeatureModelSerializer):
 
     class Meta:
         model = Province
-        fields = ["name", "code"]
+        fields = ["name", "code", "centroid"]
         geo_field = "poly"
         id_field = False
 
@@ -48,7 +48,7 @@ class MunicipalityGeoSerializer(GeoFeatureModelSerializer):
 
     class Meta:
         model = Municipality
-        fields = ["name", "code"]
+        fields = ["name", "code", "centroid"]
         geo_field = "poly"
         id_field = False
 

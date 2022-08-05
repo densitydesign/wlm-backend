@@ -37,6 +37,7 @@ class Region(models.Model):
     name = models.CharField(max_length=200)
     code = models.IntegerField(primary_key=True)
     poly = models.MultiPolygonField(blank=True, null=True)
+    centroid = models.PointField(blank=True, null=True)
 
     def __str__(self):
         return self.name
@@ -50,6 +51,7 @@ class Province(models.Model):
     code = models.IntegerField(primary_key=True)
     region_code = models.IntegerField()
     poly = models.MultiPolygonField(blank=True, null=True)
+    centroid = models.PointField(blank=True, null=True)
 
     region = models.ForeignKey(Region, models.SET_NULL, blank=True,  null=True, related_name="provinces")
 
@@ -66,6 +68,7 @@ class Municipality(models.Model):
     province_code = models.IntegerField()
     region_code = models.IntegerField()
     poly = models.MultiPolygonField(blank=True, null=True)
+    centroid = models.PointField(blank=True, null=True)
 
     province = models.ForeignKey(Province, models.SET_NULL, blank=True,  null=True, related_name='municipalities')
     region = models.ForeignKey(Region, models.SET_NULL, blank=True,  null=True, related_name="municipalities")
