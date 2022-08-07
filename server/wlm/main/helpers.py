@@ -310,7 +310,10 @@ def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_
 
 def update_category(monuments, category_snapshot, skip_pictures=False, skip_geo=False):
     for monument in monuments:
-        update_monument(monument, category_snapshot, skip_pictures=skip_pictures, skip_geo=skip_geo)
+        try:
+            update_monument(monument, category_snapshot, skip_pictures=skip_pictures, skip_geo=skip_geo)
+        except Exception as e:
+            logger.exception(e)
     
 
 def process_category_snapshot(cat_snapshot, skip_pictures=False, skip_geo=False):
