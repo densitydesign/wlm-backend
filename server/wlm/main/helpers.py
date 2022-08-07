@@ -1,4 +1,3 @@
-from this import d
 from django.core.cache import cache
 import re
 import requests
@@ -120,6 +119,8 @@ def min_max_values(flat_list, keys_map):
     
     for k in keys_map:
         values = [item[k] for item in flat_list]
+        if not len(values):
+            values = [0]
         datum = { "label": keys_map[k], "value": [min(values), max(values)]}
         out.append(datum)
     return out
@@ -135,7 +136,6 @@ def format_history(history, keys_map):
         return None
 
     def transform_key_values(item):
-        print(item)
         out =  { "date":item["date"], "groups":[]}
         
         for key in keys_map:

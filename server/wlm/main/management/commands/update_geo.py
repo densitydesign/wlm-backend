@@ -13,6 +13,7 @@ class Command(BaseCommand):
         parser.add_argument('municipalities_path', type=str)
         parser.add_argument('--dry-run', action='store_true', required=False)
 
+    
     @transaction.atomic
     def handle(self, *args, **options):
         update_geo(options['regions_path'], options['provinces_path'], options['municipalities_path'])

@@ -71,7 +71,8 @@ class MonumentSerializer(serializers.ModelSerializer):
 class MonumentSmallSerializer(serializers.ModelSerializer):
     class Meta:
         model = Monument
-        fields = ["id", "q_number", "label"]
+        fields = "__all__"
+        #fields = ["id", "q_number", "label"]
 
 
 class PictureSerializer(serializers.ModelSerializer):
