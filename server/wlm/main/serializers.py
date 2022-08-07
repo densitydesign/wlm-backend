@@ -1,9 +1,12 @@
+from asyncore import read
 from rest_framework import serializers
 from main.models import (Region, Province, Municipality, Monument,  Picture)
 from rest_framework_gis.serializers import GeometryField, GeoFeatureModelSerializer
 
 
 class RegionSerializer(serializers.ModelSerializer):
+
+    label = serializers.CharField(source="name", read_only=True)
     class Meta:
         model = Region
         exclude = ["poly"]
@@ -12,15 +15,18 @@ class RegionSerializer(serializers.ModelSerializer):
 class RegionGeoSerializer(GeoFeatureModelSerializer):
 
     poly = GeometryField()
+    label = serializers.CharField(source="name", read_only=True)
 
     class Meta:
         model = Region
-        fields = ["name", "code", "centroid"]
+        fields = ["name", "code", "centroid", "label"]
         geo_field = "poly"
         id_field = False
         
 
 class ProvinceSerializer(serializers.ModelSerializer):
+
+    label = serializers.CharField(source="name", read_only=True)
     class Meta:
         model = Province
         exclude = ["poly"]
@@ -28,15 +34,18 @@ class ProvinceSerializer(serializers.ModelSerializer):
 class ProvinceGeoSerializer(GeoFeatureModelSerializer):
 
     poly = GeometryField()
+    label = serializers.CharField(source="name", read_only=True)
 
     class Meta:
         model = Province
-        fields = ["name", "code", "centroid"]
+        fields = ["name", "code", "centroid", "label"]
         geo_field = "poly"
         id_field = False
 
 
 class MunicipalitySerializer(serializers.ModelSerializer):
+
+    label = serializers.CharField(source="name", read_only=True)
     class Meta:
         model = Municipality
         exclude = ["poly"]
@@ -45,10 +54,11 @@ class MunicipalitySerializer(serializers.ModelSerializer):
 class MunicipalityGeoSerializer(GeoFeatureModelSerializer):
 
     poly = GeometryField()
+    label = serializers.CharField(source="name", read_only=True)
 
     class Meta:
         model = Municipality
-        fields = ["name", "code", "centroid"]
+        fields = ["name", "code", "centroid", "label"]
         geo_field = "poly"
         id_field = False
 
@@ -75,4 +85,3 @@ class WLMQuerySerializer(serializers.Serializer):
     date_to = serializers.DateField()
     step_size = serializers.IntegerField(default=1)
     step_unit = serializers.CharField(default='months')
-    monuments = serializers.BooleanField(default=False)

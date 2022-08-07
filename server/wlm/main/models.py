@@ -109,7 +109,7 @@ class Monument(models.Model):
 
 
 class Picture(models.Model):
-    monument = models.ForeignKey(Monument, models.CASCADE)
+    monument = models.ForeignKey(Monument, models.CASCADE, related_name="pictures")
     image_id = models.CharField(max_length=200, unique=True)
     image_url = models.URLField(max_length=2000)
     image_date = models.DateTimeField(blank=True, null=True)

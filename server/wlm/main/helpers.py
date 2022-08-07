@@ -1,3 +1,4 @@
+from this import d
 from django.core.cache import cache
 import re
 import requests
@@ -9,6 +10,7 @@ from unicodedata import category
 from dateutil.relativedelta import relativedelta
 from rest_framework.exceptions import APIException
 from django.test import Client, RequestFactory
+import functools
 
 from django.contrib.gis.utils import LayerMapping
 from django.db import transaction, models
@@ -37,23 +39,23 @@ def get_date_snap(monuments_qs, date, group=None):
     first_image = Picture.objects.filter(
             monument__pk=models.OuterRef('pk'),
         ).order_by().values('monument__pk').annotate(
-            first_image=models.Min('image_date')
+            first_image=models.Min('image_date', default=None),
         ).values('first_image')[:1]
 
     out = monuments_qs.annotate(
         first_image=models.Subquery(first_image),
     ).annotate(
         date = models.Value(date),
-        mapped = models.Case(
+        on_wiki = models.Case(
             models.When(first_revision__lte=date, then=models.Value(1)),
             default=models.Value(0),
         ),
-        authorized = models.Case(
-            models.When(start__lte=date, then=models.Value(1)),
+        in_contest = models.Case(
+            models.When(first_revision__lte=date, start__lte=date, then=models.Value(1)),
             default=models.Value(0),
         ),
-        with_pictures = models.Case(
-            models.When(first_image__lte=date, then=models.Value(1)),
+        photographed = models.Case(
+            models.When(first_revision__lte=date, start__lte=date, first_image__lte=date, then=models.Value(1)),
             default=models.Value(0),
         ),
     )
@@ -65,12 +67,12 @@ def get_date_snap(monuments_qs, date, group=None):
         values = ['date']
 
     out = out.values(*values).order_by().annotate(
-        mapped=models.Sum('mapped'),
-        authorized=models.Sum('authorized'),
-        with_pictures=models.Sum('with_pictures'),
+        on_wiki=models.Sum('on_wiki'),
+        in_contest=models.Sum('in_contest'),
+        photographed=models.Sum('photographed'),
     )
     
-    values_final = ['mapped', 'authorized', 'with_pictures', 'date']
+    values_final = ['on_wiki', 'in_contest', 'photographed', 'date']
     if group:
         if type(group) is list:
             values_final += group
@@ -85,10 +87,8 @@ def get_date_snap(monuments_qs, date, group=None):
 
 def get_snap(monuments_qs, date_from, date_to, step_size=1, step_unit="month", group=None):
 
-
     start = date_from
     dates = [start]
-
     
     while start <= date_to:
         start += relativedelta(**{step_unit: step_size})
@@ -96,16 +96,80 @@ def get_snap(monuments_qs, date_from, date_to, step_size=1, step_unit="month", g
         if len(dates) > 50:
             raise APIException("Too many dates (max 50)")
 
-    
     out = []
     for date in dates:
         date_snap = get_date_snap(monuments_qs, date, group=group)
         out.append(date_snap)
 
+    flat_list = [item for sublist in out for item in sublist]
+
+    keys_map  = {
+            "on_wiki" : "onWIki",
+            "in_contest": "inContest",
+            "photographed": "photographed",
+        }
     
+    return {
+        "data": format_history(flat_list, keys_map),
+        "extent": min_max_values(flat_list, keys_map)
+    }
+
+
+def min_max_values(flat_list, keys_map):
+    out = []
+    
+    for k in keys_map:
+        values = [item[k] for item in flat_list]
+        datum = { "label": keys_map[k], "value": [min(values), max(values)]}
+        out.append(datum)
     return out
+    
 
 
+
+def format_history(history, keys_map):
+    def get_type(item):
+        for key in ['region', 'province', 'municipality']:
+            if key in item:
+                return key
+        return None
+
+    def transform_key_values(item):
+        print(item)
+        out =  { "date":item["date"], "groups":[]}
+        
+        for key in keys_map:
+            out["groups"].append({
+                "label": keys_map[key],
+                "value": item[key]
+            })
+        
+        return out
+
+
+    def reducer(acc, item):
+        item_type = get_type(item)
+        if not item_type:
+            return acc
+        
+        code = item[item_type]
+        label = item[item_type + '__name']
+
+        data_item = transform_key_values(item)
+        if code not in acc:
+            acc[code] = { "meta" : {"label": label, "code": code, "type": item_type}, "data": [data_item] }
+        else:
+            acc[code]["data"] += [data_item]
+
+        return acc
+
+    out_dict = functools.reduce(reducer, history, {})
+    def make_entry(dict_entry):
+        return {**dict_entry["meta"], "history": dict_entry["data"]}
+        
+    entries = [out_dict[key] for key in sorted(out_dict.keys())]
+    out = [make_entry(entry) for entry in entries]
+    return out
 
 
 
@@ -121,6 +185,7 @@ def monument_prop(monument_data, prop, default=None):
     if isinstance(value, list):
         if not len(value):
             return default
+        return min(value) or default
         return value[0] or default
 
     return value
@@ -261,7 +326,7 @@ def process_category_snapshot(cat_snapshot, skip_pictures=False, skip_geo=False)
     
 
 
-def take_snapshot(skip_pictures=False, skip_geo=False, force_new_snapshot=False):
+def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False):
     """
     New monuments + Update to monuments data
     New Approved/Unapproved monuments
@@ -269,7 +334,10 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_new_snapshot=False)
     Aggregate data on geographic entities #TODO: evaluate on-the-fly aggregation with aggressive caching (break on import and pre-caching)
     """
     pending_snapshots = Snapshot.objects.filter(complete=False).order_by('-created')
-    if not pending_snapshots.exists():
+    if force_restart:
+        pending_snapshots.delete()
+        snapshot = Snapshot.objects.create()
+    elif not pending_snapshots.exists():
         logger.info("No pending snapshots")
         snapshot = Snapshot.objects.create()
     else:

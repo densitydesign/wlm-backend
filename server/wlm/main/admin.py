@@ -23,8 +23,14 @@ class CategorySnapshotAdmin(admin.ModelAdmin):
 admin.site.register(CategorySnapshot, CategorySnapshotAdmin)
 
 
+class PictureInline(admin.TabularInline):
+    model = Picture
+    extra = 1
+
+
 class MonumentAdmin(admin.ModelAdmin):
-    list_filter = ['region', 'province', 'categories']
+    list_filter = ['region', 'province', 'categories', 'start']
+    inlines = [PictureInline]
 
 
 admin.site.register(Monument, MonumentAdmin)
