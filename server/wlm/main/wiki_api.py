@@ -27,6 +27,7 @@ WIKI_CANDIDATE_TYPES = [
     {"q_number": "Q1030034", "label": "GLAM"},
     {"q_number": "Q16560", "label": "Palazzo"},
     {"q_number": "Q24398318", "label": "edificio religioso"},
+    {"q_number":" Q12131650", "label": "luogo di sepoltura" }
 ]
 
 WLM_QUERIES = [
