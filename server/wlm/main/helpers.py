@@ -1,3 +1,5 @@
+from cmath import inf
+from typing import OrderedDict
 from django.core.cache import cache
 import re
 import requests
@@ -89,11 +91,12 @@ def get_snap(monuments_qs, date_from, date_to, step_size=1, step_unit="month", g
     start = date_from
     dates = [start]
     
-    while start <= date_to:
+    while start  <= date_to:
         start += relativedelta(**{step_unit: step_size})
         dates.append(start)
         if len(dates) > 50:
             raise APIException("Too many dates (max 50)")
+
 
     out = []
     for date in dates:
@@ -102,11 +105,11 @@ def get_snap(monuments_qs, date_from, date_to, step_size=1, step_unit="month", g
 
     flat_list = [item for sublist in out for item in sublist]
 
-    keys_map  = {
-            "on_wiki" : "onWIki",
-            "in_contest": "inContest",
+    keys_map  = OrderedDict({
             "photographed": "photographed",
-        }
+            "in_contest": "inContest",
+            "on_wiki" : "onWIki",
+        })
     
     return {
         "data": format_history(flat_list, keys_map),
@@ -152,7 +155,8 @@ def format_history(history, keys_map):
         if not item_type:
             return acc
         
-        code = item[item_type]
+        #for items with no code, we use 0, otherwise the "sorted" function will not work
+        code = item[item_type] or 0
         label = item[item_type + '__name']
 
         data_item = transform_key_values(item)
@@ -166,11 +170,27 @@ def format_history(history, keys_map):
     out_dict = functools.reduce(reducer, history, {})
     def make_entry(dict_entry):
         return {**dict_entry["meta"], "history": dict_entry["data"]}
+    
+    #sorting entries with respect to the last value of the "on_wiki" data point (areas with more monuments on wiki are on top)
+    def get_max_value(key):
+        item = out_dict[key]
+        if "data" not in item:
+            return inf
+
+        if not len(item["data"]):
+            return inf
+
+        if "groups" not in item["data"][-1]:
+            return inf
         
-    entries = [out_dict[key] for key in sorted(out_dict.keys())]
+        if not len (item["data"][-1]["groups"]):
+            return inf
+
+        return -item["data"][-1]["groups"][-1]["value"]
+        
+    entries = [out_dict[key] for key in sorted(out_dict.keys(), key=get_max_value)]
     out = [make_entry(entry) for entry in entries]
     return out
-
 
 
 def get_img_url(title):
@@ -186,8 +206,7 @@ def monument_prop(monument_data, prop, default=None):
         if not len(value):
             return default
         return min(value) or default
-        return value[0] or default
-
+    
     return value
 
 
@@ -350,7 +369,11 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False):
     categories_snapshots = []
     #creating CategorySnapshot
     for item in WLM_QUERIES + WIKI_CANDIDATE_TYPES:
+        
         category = Category.objects.get_or_create(label=item["label"])[0]
+        category.q_number = item["q_number"]
+        category.save()
+
         if "query_file" in item:
             query = get_wlm_query(item['query_file'])
         else:

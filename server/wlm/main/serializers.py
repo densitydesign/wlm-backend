@@ -1,7 +1,14 @@
 from asyncore import read
 from rest_framework import serializers
-from main.models import (Region, Province, Municipality, Monument,  Picture)
+from main.models import (Region, Province, Municipality, Monument,  Picture, Category)
 from rest_framework_gis.serializers import GeometryField, GeoFeatureModelSerializer
+
+
+class CategorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Category
+        fields = "__all__"
 
 
 class RegionSerializer(serializers.ModelSerializer):
@@ -86,3 +93,4 @@ class WLMQuerySerializer(serializers.Serializer):
     date_to = serializers.DateField()
     step_size = serializers.IntegerField(default=1)
     step_unit = serializers.CharField(default='months')
+    theme = serializers.CharField(required=False)

@@ -1,11 +1,13 @@
 from django.core.cache import cache
 from rest_framework import viewsets
+from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from main.models import (Region, Province, Municipality, Monument, Picture)
+from main.models import (Region, Province, Municipality, Monument, Picture, Category, Snapshot)
 from main.serializers import (RegionSerializer, RegionGeoSerializer,
      ProvinceSerializer, MunicipalitySerializer, MonumentSerializer, 
      MonumentSmallSerializer,  PictureSerializer, 
+     CategorySerializer,
      WLMQuerySerializer, ProvinceGeoSerializer, MunicipalityGeoSerializer)
 from main.helpers import get_snap, format_history
 from drf_spectacular.utils import extend_schema
@@ -22,9 +24,29 @@ def get_history(monuments_qs, query_params, group=None):
     date_to = ser.validated_data["date_to"]
     step_size = ser.validated_data["step_size"]
     step_unit = ser.validated_data["step_unit"]
+
+    theme = ser.validated_data.get("theme", None)
+    if theme:
+        monuments_qs = monuments_qs.filter(categories__q_number=theme)
     
     history = get_snap(monuments_qs, date_from, date_to, step_size=step_size, step_unit=step_unit, group=group)
     return history, ser.validated_data
+
+
+
+class DomainView(APIView):
+    def get(self, request):
+        categories = Category.objects.all()
+        cat_serializer = CategorySerializer(categories, many=True)
+        last_snapshot = Snapshot.objects.latest('updated')
+        if last_snapshot:
+            last_date = last_snapshot.updated.date()
+        else:
+            last_date = None
+        
+        return Response({"themes" : cat_serializer.data, "last_snapshot": last_date})
+
+
 
 class RegionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Region.objects.all()
@@ -53,6 +75,13 @@ class RegionViewSet(viewsets.ReadOnlyModelViewSet):
             return Response(cached)
         ser = ProvinceGeoSerializer(region.provinces.all(), many=True)
         return Response(ser.data)   
+
+    @extend_schema(parameters=[WLMQuerySerializer])
+    @action(methods=["get"], detail=False, url_path="wlm-regions")
+    def wlm_regions(self, request, pk=None):
+        monuments_qs = Monument.objects.all()
+        history, validated_data = get_history(monuments_qs, request.query_params, group=['region', 'region__name'])
+        return Response(history)
         
     @extend_schema(parameters=[WLMQuerySerializer])
     @action(methods=["get"], detail=True)
