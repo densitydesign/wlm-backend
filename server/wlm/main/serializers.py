@@ -94,3 +94,4 @@ class WLMQuerySerializer(serializers.Serializer):
     step_size = serializers.IntegerField(default=1)
     step_unit = serializers.CharField(default='months')
     theme = serializers.CharField(required=False)
+
