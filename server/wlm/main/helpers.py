@@ -46,6 +46,9 @@ def get_date_snap(monuments_qs, date, group=None):
     out = monuments_qs.annotate(
         first_image=models.Subquery(first_image),
     ).annotate(
+        national=models.Value("1"),
+        national_name=models.Value("Italy"),
+        
         date = models.Value(date),
         on_wiki = models.Case(
             models.When(first_revision__lte=date, then=models.Value(1)),
@@ -80,13 +83,16 @@ def get_date_snap(monuments_qs, date, group=None):
         else:
             values_final.append(group)
     
-        
     out = out.values(*values_final)
 
     return out
 
 
 def get_snap(monuments_qs, date_from, date_to, step_size=1, step_unit="month", group=None):
+    """
+    Please note that "group" parameter is not so `free` as it seems.
+    (see format_history method)
+    """
 
     start = date_from
     dates = [start]
@@ -133,7 +139,7 @@ def min_max_values(flat_list, keys_map):
 
 def format_history(history, keys_map):
     def get_type(item):
-        for key in ['region', 'province', 'municipality']:
+        for key in ['region', 'province', 'municipality', 'national']:
             if key in item:
                 return key
         return None
@@ -157,7 +163,10 @@ def format_history(history, keys_map):
         
         #for items with no code, we use 0, otherwise the "sorted" function will not work
         code = item[item_type] or 0
-        label = item[item_type + '__name']
+        if item_type == 'national':
+            label = item[item_type + '_name']
+        else:
+            label = 'national_name'
 
         data_item = transform_key_values(item)
         if code not in acc:
@@ -348,6 +357,48 @@ def process_category_snapshot(cat_snapshot, skip_pictures=False, skip_geo=False)
     
 
 
+def update_geo_from_parents():
+    """tries to update missing municipalies, provinces and regions on all the dataset, for monuments with parents"""
+    for monument in Monument.objects.filter(models.Q(position=None) | models.Q(municipality=None)).exclude(parent_q_number=""):
+        if monument.parent_q_number:
+            try:
+                parent_monument = Monument.objects.get(q_number=monument.parent_q_number)
+                monument.position = parent_monument.position
+                
+                try:
+                    municipality = Municipality.objects.get(
+                        poly__contains=monument.position,
+                    )
+                    monument.municipality = municipality
+                    monument.province = municipality.province
+                    monument.region = municipality.province.region
+                    
+                except Municipality.DoesNotExist:
+                    pass
+                
+                monument.save()
+            
+            except Monument.DoesNotExist:
+                pass
+
+def update_geo_areas():
+    """tries to update missing municipalies, provinces and regions on all the dataset"""
+    for monument in Monument.objects.filter(municipality=None, position__isnull=False):
+        try:
+            municipality = Municipality.objects.get(
+                poly__contains=monument.position,
+            )
+            monument.municipality = municipality
+            monument.province = municipality.province
+            monument.region = municipality.province.region
+            monument.save()
+            
+        except Municipality.DoesNotExist:
+            pass
+        
+        
+
+
 def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False):
     """
     New monuments + Update to monuments data
@@ -394,15 +445,9 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False):
         cat_snapshot.save()
 
     #fixing empty positions
-    for monument in Monument.objects.filter(position=None).exclude(parent_q_number=""):
-        if monument.parent_q_number:
-            try:
-                parent_monument = Monument.objects.get(q_number=monument.parent_q_number)
-                monument.position = parent_monument.position
-                monument.save()
-            except Monument.DoesNotExist:
-                pass
-
+    if not skip_geo:
+        update_geo_from_parents()
+    
     snapshot.complete = True
     snapshot.save()
     snapshot.category_snapshots.all().delete()

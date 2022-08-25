@@ -77,6 +77,14 @@ class RegionViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(ser.data)   
 
     @extend_schema(parameters=[WLMQuerySerializer])
+    @action(methods=["get"], detail=False, url_path="wlm-aggregate")
+    def wlm_aggregate(self, request, pk=None):
+        monuments_qs = Monument.objects.all()
+        history, validated_data = get_history(monuments_qs, request.query_params, group=['national', 'national_name'])
+        return Response(history)
+
+
+    @extend_schema(parameters=[WLMQuerySerializer])
     @action(methods=["get"], detail=False, url_path="wlm-regions")
     def wlm_regions(self, request, pk=None):
         monuments_qs = Monument.objects.all()
