@@ -3,32 +3,22 @@ import os
 from pathlib import Path
 import requests
 import time
+import csv
 
 CURRENT_DIR = Path(__file__).resolve().parent
 SPARQL_URL = "https://query.wikidata.org/sparql"
 COMMONS_URL = "https://commons.wikimedia.org/w/api.php"
 API_URL = "https://www.wikidata.org/w/api.php"
 
-WIKI_CANDIDATE_TYPES = [
-    {"q_number": "Q3950", "label": "villa"},
-    {"q_number": "Q12518", "label": "torre"},
-    {"q_number": "Q57821", "label": "Fortificazione"},
-    {"q_number": "Q179049", "label": "area naturale protetta"},
-    {"q_number": "Q333109", "label": "Überrest"},
-    {"q_number": "Q811534", "label": "pianta monumentale"},
-    {"q_number": "Q1291195", "label": "luogo di scoperta (comprende siti archeologici)"},
-    {"q_number": "Q2065736", "label": "bene culturale"},
-    {"q_number": "Q2232001", "label": "grotta turistica"},
-    {"q_number": "Q4989906", "label": "monumento"},
-    {"q_number": "Q11331347", "label": "sacro monte"},
-    {"q_number": "Q15069452", "label": "area protetta Natura 2000"},
-    {"q_number": "Q35112127", "label": "edificio storico"},
-    {"q_number": "Q57660343", "label": "performing art buildings"},
-    {"q_number": "Q1030034", "label": "GLAM"},
-    {"q_number": "Q16560", "label": "Palazzo"},
-    {"q_number": "Q24398318", "label": "edificio religioso"},
-    {"q_number":" Q12131650", "label": "luogo di sepoltura"}
-]
+
+def load_wiki_candidate_types():
+    file_path = CURRENT_DIR / "WIKI_CANDIDATE_TYPES.csv"
+    with open(file_path, "r") as f:
+        reader = csv.DictReader(f, delimiter=",")
+        return list(reader)
+
+
+WIKI_CANDIDATE_TYPES = load_wiki_candidate_types()
 
 WLM_QUERIES = [
     {"label": "contest", "query_file" : "SPARQL-contest.txt", "q_number": "W0"},
