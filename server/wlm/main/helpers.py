@@ -71,9 +71,9 @@ def get_date_snap(monuments_qs, date, group=None):
         values = ['date']
 
     out = out.values(*values).order_by().annotate(
-        on_wiki=models.Sum('on_wiki'),
-        in_contest=models.Sum('in_contest'),
-        photographed=models.Sum('photographed'),
+        on_wiki=models.Sum('on_wiki', default=0),
+        in_contest=models.Sum('in_contest', default=0),
+        photographed=models.Sum('photographed', default=0),
     )
     
     values_final = ['on_wiki', 'in_contest', 'photographed', 'date']
