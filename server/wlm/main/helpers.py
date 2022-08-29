@@ -127,9 +127,10 @@ def min_max_values(flat_list, keys_map):
     out = []
     
     for k in keys_map:
-        values = [item[k] for item in flat_list]
+        values = [item[k] for item in flat_list if item[k] is not None]
         if not len(values):
             values = [0]
+        
         datum = { "label": keys_map[k], "value": [min(values), max(values)]}
         out.append(datum)
     return out
@@ -193,6 +194,9 @@ def format_history(history, keys_map):
             return inf
         
         if not len (item["data"][-1]["groups"]):
+            return inf
+        
+        if item["data"][-1]["groups"][-1]["value"] is None:
             return inf
 
         return -item["data"][-1]["groups"][-1]["value"]
