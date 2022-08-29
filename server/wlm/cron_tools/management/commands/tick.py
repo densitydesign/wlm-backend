@@ -1,5 +1,5 @@
 import logging
-#from sentry_sdk import capture_exception, push_scope
+from sentry_sdk import capture_exception, push_scope
 from django.conf import settings
 from django.utils.module_loading import import_string
 from django.utils import timezone
@@ -58,17 +58,17 @@ class Command(BaseCommand):
             try:
                 handler(**job.kwargs)
             except Exception as e:
-                # with push_scope() as scope:
-                #     scope.set_tag("job_type", job.job_type)
-                #     scope.set_context(
-                #         "JobInfo",
-                #         {
-                #             "job_type": job.job_type,
-                #             "cron_expression": job.cron_expression,
-                #             "kwargs": job.kwargs,
-                #         },
-                #     )
-                #     capture_exception(e)
+                with push_scope() as scope:
+                    scope.set_tag("job_type", job.job_type)
+                    scope.set_context(
+                        "JobInfo",
+                        {
+                            "job_type": job.job_type,
+                            "cron_expression": job.cron_expression,
+                            "kwargs": job.kwargs,
+                        },
+                    )
+                    capture_exception(e)
                 logger.exception("Error during handling job %s" % (job.job_type,))
                 # Re insert the job if is a job with time
                 if job.execution_time:
