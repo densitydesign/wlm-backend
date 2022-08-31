@@ -15,7 +15,7 @@ services:
     ports:
       - 5433:5432
 
-  redis:
+  wlm_redis:
     image: redis:6.2.6
     restart: always
     ports:

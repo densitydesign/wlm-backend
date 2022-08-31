@@ -313,6 +313,8 @@ def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_
     else:
         first_revision = monument.first_revision
 
+    
+
     Monument.objects.filter(pk=monument.pk).update(
         label=label,
         wlm_n=wlm_n,
@@ -368,18 +370,19 @@ def update_geo_from_parents():
             try:
                 parent_monument = Monument.objects.get(q_number=monument.parent_q_number)
                 monument.position = parent_monument.position
-                
-                try:
-                    municipality = Municipality.objects.get(
-                        poly__contains=monument.position,
-                    )
-                    monument.municipality = municipality
-                    monument.province = municipality.province
-                    monument.region = municipality.province.region
+
+                if monument.position:
+                    try:
+                        municipality = Municipality.objects.get(
+                            poly__contains=monument.position,
+                        )
+                        monument.municipality = municipality
+                        monument.province = municipality.province
+                        monument.region = municipality.province.region
+                        
+                    except Municipality.DoesNotExist:
+                        pass
                     
-                except Municipality.DoesNotExist:
-                    pass
-                
                 monument.save()
             
             except Monument.DoesNotExist:

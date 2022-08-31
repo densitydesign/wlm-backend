@@ -18,7 +18,7 @@ class SnapshotAdmin(admin.ModelAdmin):
 admin.site.register(Snapshot, SnapshotAdmin)
 class CategorySnapshotAdmin(admin.ModelAdmin):
     readonly_fields = ['has_payload', 'updated']
-    list_display = ['__str__', 'updated']
+    list_display = ['__str__', 'updated', 'complete']
 
 admin.site.register(CategorySnapshot, CategorySnapshotAdmin)
 
