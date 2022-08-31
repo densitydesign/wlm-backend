@@ -39,12 +39,12 @@ class DomainView(APIView):
         categories = Category.objects.all()
         cat_serializer = CategorySerializer(categories, many=True)
         try:
-            last_snapshot = Snapshot.objects.latest('updated')
+            last_snapshot = Snapshot.objects.latest('created')
         except Snapshot.DoesNotExist:
             last_snapshot = None
             
         if last_snapshot is not None:
-            last_date = last_snapshot.updated.date()
+            last_date = last_snapshot.created.date()
         else:
             last_date = None
         

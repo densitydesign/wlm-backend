@@ -85,24 +85,29 @@ class Monument(models.Model):
     q_number = models.CharField(max_length=200, unique=True)
     parent_q_number = models.CharField(max_length=200, blank=True, default="")
     wlm_n = models.CharField(max_length=200, blank='', default='')
-    start = models.DateTimeField(blank=True, null=True)
-    end = models.DateTimeField(blank=True, null=True)
+    start = models.DateTimeField(blank=True, null=True, db_index=True)
+    end = models.DateTimeField(blank=True, null=True, db_index=True)
     data = models.JSONField(default=dict)
 
     position = models.PointField(blank=True, null=True)
     relevant_images = models.JSONField(default=list)
 
-    first_revision = models.DateTimeField(blank=True, null=True)
+    first_revision = models.DateTimeField(blank=True, null=True, db_index=True)
 
     municipality = models.ForeignKey(Municipality, models.SET_NULL, null=True, blank=True, related_name='monuments')
     province = models.ForeignKey(Province, models.SET_NULL, blank=True,  null=True, related_name='monuments')
-    region = models.ForeignKey(Region, models.SET_NULL, blank=True,  null=True, related_name='monuments')
+    region = models.ForeignKey(Region, models.SET_NULL, blank=True,  null=True, related_name='monuments',)
 
     categories = models.ManyToManyField(Category, blank=True)
 
     snapshot = models.ForeignKey(Snapshot, models.SET_NULL, null=True, blank=True, related_name='monuments')
 
     #TODO ADD REFS TO PROVINCE AND REGION TO SPEEDUP QUERIES
+
+    class Meta:
+        index_together = [
+            ('id', 'start', 'first_revision'),
+        ]    
 
     def __str__(self):
         return self.label
@@ -112,10 +117,15 @@ class Picture(models.Model):
     monument = models.ForeignKey(Monument, models.CASCADE, related_name="pictures")
     image_id = models.CharField(max_length=200, unique=True)
     image_url = models.URLField(max_length=2000)
-    image_date = models.DateTimeField(blank=True, null=True)
+    image_date = models.DateTimeField(blank=True, null=True, db_index=True)
     image_title = models.TextField(blank=True, default="")
     image_type = models.CharField(max_length=20)
     data = models.JSONField(default=dict)
+
+    class Meta:
+        index_together = [
+            ('monument', 'image_date'),
+        ]    
 
 
 
