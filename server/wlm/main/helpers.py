@@ -44,8 +44,6 @@ def get_date_snap(monuments_qs, date, group=None):
         ).values('first_image')[:1]
 
     out = monuments_qs.annotate(
-        first_image=models.Subquery(first_image),
-    ).annotate(
         national=models.Value("1"),
         national_name=models.Value("Italy"),
         
@@ -59,7 +57,7 @@ def get_date_snap(monuments_qs, date, group=None):
             default=models.Value(0),
         ),
         photographed = models.Case(
-            models.When(first_revision__lte=date, start__lte=date, first_image__lte=date, then=models.Value(1)),
+            models.When(first_revision__lte=date, start__lte=date, first_image_date__lte=date, then=models.Value(1)),
             default=models.Value(0),
         ),
     )
@@ -255,6 +253,7 @@ def update_image(monument, image_data, image_type):
 def parse_point(point_str):
     return point_str.upper().replace("POINT(", "").replace(")", "").split(" ")
 
+@transaction.atomic
 def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_geo=False):
     category = category_snapshot.category
     label = category.label
@@ -338,6 +337,10 @@ def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_
         images = search_commons(code)
         for image in images:
             update_image(monument, image, 'wlm')
+
+        aggregates = monument.pictures.all().aggregate(first_image_date=models.Min('image_date'))
+        monument.first_image_date = aggregates['first_image_date']
+        monument.save()
 
     return monument
 
@@ -578,3 +581,15 @@ def update_geo_cache():
         municipalities_geo = MunicipalityGeoSerializer(municipalities, many=True).data
         cache.set(f"province_geo/{province.code}", municipalities_geo, None)    
         
+def update_first_image_date():
+    first_image = Picture.objects.filter(
+            monument__pk=models.OuterRef('pk'),
+        ).order_by().values('monument__pk').annotate(
+            first_image=models.Min('image_date', default=None),
+        ).values('first_image')[:1]
+
+    monuments = Monument.objects.annotate(
+        first_image=models.Subquery(first_image),
+    )
+
+    monuments.update(first_image_date=models.F('first_image'))

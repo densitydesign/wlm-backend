@@ -102,11 +102,13 @@ class Monument(models.Model):
 
     snapshot = models.ForeignKey(Snapshot, models.SET_NULL, null=True, blank=True, related_name='monuments')
 
-    #TODO ADD REFS TO PROVINCE AND REGION TO SPEEDUP QUERIES
+    first_image_date = models.DateField(blank=True, null=True)
 
+    
     class Meta:
         index_together = [
-            ('id', 'start', 'first_revision'),
+            ('start', 'first_revision'),
+            ('start', 'first_revision', 'first_image_date'),
         ]    
 
     def __str__(self):
