@@ -164,10 +164,10 @@ def format_history(history, keys_map):
         
         #for items with no code, we use 0, otherwise the "sorted" function will not work
         code = item[item_type] or 0
-        if item_type == 'national':
-            label = item[item_type + '_name']
+        if item_type != 'national':
+            label = item[item_type + '__name']
         else:
-            label = 'national_name'
+            label = 'Italia'
 
         data_item = transform_key_values(item)
         if code not in acc:
