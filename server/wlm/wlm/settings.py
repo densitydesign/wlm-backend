@@ -222,6 +222,9 @@ INTERNAL_IPS = [
     "127.0.0.1",
 ]
 
+#override in localsettings to enable caching with last-modified header
+HTTP_CONDITIONAL_CACHE = False
+
 
 try:
     from .localsettings import * # noqa

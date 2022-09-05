@@ -254,7 +254,7 @@ def parse_point(point_str):
     return point_str.upper().replace("POINT(", "").replace(")", "").split(" ")
 
 @transaction.atomic
-def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_geo=False):
+def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_geo=False, category_only=True):
     category = category_snapshot.category
     label = category.label
 
@@ -264,7 +264,8 @@ def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_
 
     try:
         monument = Monument.objects.get(q_number=code)
-        if monument.snapshot == category_snapshot.snapshot:
+        if monument.snapshot == category_snapshot.snapshot or category_only:
+            monument.categories.add(category)
             logger.log(logging.INFO, f"Skipping monument {code}")
             return monument
 
@@ -345,15 +346,15 @@ def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_
     return monument
 
 
-def update_category(monuments, category_snapshot, skip_pictures=False, skip_geo=False):
+def update_category(monuments, category_snapshot, skip_pictures=False, skip_geo=False, category_only=False):
     for monument in monuments:
         try:
-            update_monument(monument, category_snapshot, skip_pictures=skip_pictures, skip_geo=skip_geo)
+            update_monument(monument, category_snapshot, skip_pictures=skip_pictures, skip_geo=skip_geo, category_only=category_only)
         except Exception as e:
             logger.exception(e)
     
 
-def process_category_snapshot(cat_snapshot, skip_pictures=False, skip_geo=False):
+def process_category_snapshot(cat_snapshot, skip_pictures=False, skip_geo=False, category_only=False):
     logger.info(f"process_category_snapshot {cat_snapshot.category.label}")
     if not cat_snapshot.payload:
         logger.info(f"running sparql for {cat_snapshot.category.label}")
@@ -362,7 +363,7 @@ def process_category_snapshot(cat_snapshot, skip_pictures=False, skip_geo=False)
         cat_snapshot.payload = data
         cat_snapshot.save()
     monuments = [format_monument(x) for x in cat_snapshot.payload]
-    update_category(monuments, cat_snapshot, skip_pictures=skip_pictures, skip_geo=skip_geo)
+    update_category(monuments, cat_snapshot, skip_pictures=skip_pictures, skip_geo=skip_geo, category_only=category_only)
     
 
 
@@ -409,7 +410,7 @@ def update_geo_areas():
         
 
 
-def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False):
+def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, category_only=False):
     """
     New monuments + Update to monuments data
     New Approved/Unapproved monuments
@@ -450,7 +451,7 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False):
     for cat_snapshot in categories_snapshots:
         if cat_snapshot.complete:
             continue
-        process_category_snapshot(cat_snapshot, skip_pictures=skip_pictures, skip_geo=skip_geo)
+        process_category_snapshot(cat_snapshot, skip_pictures=skip_pictures, skip_geo=skip_geo, category_only=category_only)
         cat_snapshot.complete = True
         cat_snapshot.save()
 

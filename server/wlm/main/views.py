@@ -14,7 +14,22 @@ from drf_spectacular.utils import extend_schema
 from rest_framework.pagination import PageNumberPagination
 from django_filters import rest_framework as filters
 from django.db import models
+from django.utils.decorators import method_decorator
+from django.views.decorators.http import condition
+from django.views.decorators.cache import cache_control
+from django.conf import settings
 
+
+def get_last_import(request):
+    """
+    Last-modified logic computation
+    """
+    if not getattr(settings, 'HTTP_CONDITIONAL_CACHE', False):
+        return None
+    
+    agg = Snapshot.objects.aggregate(last_import=models.Max("created"))
+    return agg["last_import"]
+    
 
 def get_history(monuments_qs, query_params, group=None):
     ser = WLMQuerySerializer(data=query_params)
@@ -33,7 +48,8 @@ def get_history(monuments_qs, query_params, group=None):
     return history, ser.validated_data
 
 
-
+@method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
+@method_decorator(cache_control(max_age=0, public=True), name="dispatch")
 class DomainView(APIView):
     def get(self, request):
         categories = Category.objects.all()
@@ -52,6 +68,8 @@ class DomainView(APIView):
 
 
 
+@method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
+@method_decorator(cache_control(max_age=0, public=True), name="dispatch")
 class RegionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Region.objects.all()
     serializer_class = RegionSerializer
@@ -118,6 +136,8 @@ class RegionViewSet(viewsets.ReadOnlyModelViewSet):
     #     return Response(MonumentSmallSerializer(monuments_qs, many=True).data)
 
 
+@method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
+@method_decorator(cache_control(max_age=0, public=True), name="dispatch")
 class ProvinceViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Province.objects.all()
     serializer_class = ProvinceSerializer
@@ -167,6 +187,8 @@ class ProvinceViewSet(viewsets.ReadOnlyModelViewSet):
     #     return Response(MonumentSmallSerializer(monuments_qs, many=True).data)
 
 
+@method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
+@method_decorator(cache_control(max_age=0, public=True), name="dispatch")
 class MunicipalityViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Municipality.objects.all()
     serializer_class = MunicipalitySerializer
@@ -207,14 +229,16 @@ class MonumentFilter(filters.FilterSet):
         model = Monument
         fields = ['region', 'province', 'municipality', 'theme']
 
-
+@method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
+@method_decorator(cache_control(max_age=0, public=True), name="dispatch")
 class MonumentViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Monument.objects.all()
     serializer_class = MonumentSerializer
     pagination_class = StandardResultsSetPagination
     filterset_class = MonumentFilter
     
-
+@method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
+@method_decorator(cache_control(max_age=0, public=True), name="dispatch")
 class PictureViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Picture.objects.all()
     serializer_class = PictureSerializer

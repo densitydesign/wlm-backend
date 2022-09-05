@@ -13,6 +13,7 @@ class Snapshot(models.Model):
 class Category(models.Model):
     label = models.CharField(max_length=200)
     q_number = models.CharField(max_length=200)
+    #group = models.CharField(max_length=200, blank=True, default="")
 
     def __str__(self):
         return self.label
