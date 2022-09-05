@@ -12,6 +12,7 @@ from dateutil.relativedelta import relativedelta
 from rest_framework.exceptions import APIException
 from django.test import Client, RequestFactory
 import functools
+from django.core.cache import caches
 
 from django.contrib.gis.utils import LayerMapping
 from django.db import transaction, models
@@ -463,6 +464,8 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
     snapshot.save()
     snapshot.category_snapshots.all().delete()
 
+    #clearing view cache
+    caches['views'].clear()
 
 
 

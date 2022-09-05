@@ -179,7 +179,11 @@ SPECTACULAR_SETTINGS = {
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': 'wlm_redis://127.0.0.1:6379',
+        'LOCATION': 'redis://127.0.0.1:6379',
+    },
+    'views': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379',
     }
 }
 
