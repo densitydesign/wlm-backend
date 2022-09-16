@@ -4,6 +4,7 @@ from pathlib import Path
 import requests
 import time
 import csv
+import urllib.parse
 
 CURRENT_DIR = Path(__file__).resolve().parent
 SPARQL_URL = "https://query.wikidata.org/sparql"
@@ -67,14 +68,85 @@ def format_monument(monument):
     return monument
 
 
-def search_commons(id, is_commons=False):
+def search_commons_url(url):    
+
+    filename = url.split("FilePath/")[-1]
+    payload = {
+        "action": "query",
+        "format": "json",
+        "prop": "imageinfo",
+        "generator": "search",
+        "iiprop": "extmetadata",
+        "gsrsearch": f"prefix:file:{filename}"
+        
+    }
+    params = "&".join("%s=%s" % (k,v) for k,v in payload.items())
+    r = requests.get(COMMONS_URL, params)
+    
+    if "query" in data and "pages" in data["query"] and len(data["query"]["pages"]) > 0:
+        images_data_clean = []
+        for pageid in data["query"]["pages"]:
+            image = data["query"]["pages"][str(pageid)]
+            temp_obj = {}
+            if "pageid" in image:
+                temp_obj["pageid"] = image["pageid"]
+            if "title" in image:
+                temp_obj["title"] = image["title"]
+            if "imageinfo" in image and len(image["imageinfo"]) > 0 and "extmetadata" in image["imageinfo"][0]:
+                extmetadata = image["imageinfo"][0]["extmetadata"]
+                if "DateTimeOriginal" in extmetadata and "value" in extmetadata["DateTimeOriginal"]:
+                    temp_obj["DateTimeOriginal"] = extmetadata["DateTimeOriginal"]["value"]
+                if "DateTime" in extmetadata and "value" in extmetadata["DateTime"]:
+                    temp_obj["DateTime"] = extmetadata["DateTime"]["value"]
+
+            images_data_clean.append(temp_obj)
+        return images_data_clean
+    else:
+        return []
+
+
+def search_commons_wlm(wlm_id):
     params = {
         "action": "query",
         "format": "json",
         "prop": "imageinfo",
         "generator": "search",
         "iiprop": "extmetadata",
-        
+        "gsrsearch": '"' + wlm_id + '"',
+        "gsrnamespace": "6"
+    }
+    r = requests.get(COMMONS_URL, params)
+    data = r.json()
+    if "query" in data and "pages" in data["query"] and len(data["query"]["pages"]) > 0:
+        images_data_clean = []
+        for pageid in data["query"]["pages"]:
+            image = data["query"]["pages"][str(pageid)]
+            temp_obj = {}
+            if "pageid" in image:
+                temp_obj["pageid"] = image["pageid"]
+            if "title" in image:
+                temp_obj["title"] = image["title"]
+            if "imageinfo" in image and len(image["imageinfo"]) > 0 and "extmetadata" in image["imageinfo"][0]:
+                extmetadata = image["imageinfo"][0]["extmetadata"]
+                if "DateTimeOriginal" in extmetadata and "value" in extmetadata["DateTimeOriginal"]:
+                    temp_obj["DateTimeOriginal"] = extmetadata["DateTimeOriginal"]["value"]
+                if "DateTime" in extmetadata and "value" in extmetadata["DateTime"]:
+                    temp_obj["DateTime"] = extmetadata["DateTime"]["value"]
+
+            images_data_clean.append(temp_obj)
+        return images_data_clean
+    else:
+        return []
+
+
+
+def search_commons(id, is_commons=False):
+    params = {
+        "action": "query",
+        "format": "json",
+        "prop": "imageinfo",
+        "generator": "search",
+        "iiprop": "extmetadata",    
         "gsrnamespace": "6",
     }
 

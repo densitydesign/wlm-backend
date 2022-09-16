@@ -104,6 +104,7 @@ class Monument(models.Model):
     snapshot = models.ForeignKey(Snapshot, models.SET_NULL, null=True, blank=True, related_name='monuments')
 
     first_image_date = models.DateField(blank=True, null=True)
+    first_image_date_commons = models.DateField(blank=True, null=True)
 
     
     class Meta:

@@ -23,7 +23,8 @@ from main.wiki_api import (
     format_monument,
     WLM_QUERIES,
     WIKI_CANDIDATE_TYPES,
-    search_commons,
+    search_commons_url,
+    search_commons_wlm,
     get_revision,
     get_query_template_typologies,
     get_wlm_query,
@@ -32,6 +33,7 @@ from main.wiki_api import (
 from main.models import Monument, Picture, Region, Province, Municipality, Category, CategorySnapshot, Snapshot
 from main.serializers import ProvinceGeoSerializer, MunicipalityGeoSerializer, RegionGeoSerializer
 from django.contrib.gis.db.models.functions import Centroid
+
 
 
 logger = logging.getLogger(__name__)
@@ -208,6 +210,9 @@ def format_history(history, keys_map):
 def get_img_url(title):
     return "https://commons.wikimedia.org/wiki/Special:Filepath/" + title.replace("File:", "")
 
+def get_image_title(url):
+    return "File:" + url.replace("https://commons.wikimedia.org/wiki/Special:Filepath/", "")
+
 
 def monument_prop(monument_data, prop, default=None):
     value = monument_data.get(prop, None)
@@ -334,14 +339,24 @@ def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_
 
     monument.categories.add(category)
 
-    if not skip_pictures:
+    if not skip_pictures and wlm_n:
         logger.info(f"Updating pictures for {code}")
-        images = search_commons(code)
+        images = search_commons_wlm(wlm_n)
         for image in images:
             update_image(monument, image, 'wlm')
 
-        aggregates = monument.pictures.all().aggregate(first_image_date=models.Min('image_date'))
+        #todo: process relevant image
+        for relevant_image_url in relevant_images:
+            relevant_images_data = search_commons_url(relevant_image_url)
+            for image in relevant_images_data:
+                update_image(monument, image, 'commons')
+
+        aggregates = monument.pictures.filter(image_type="wlm").aggregate(first_image_date=models.Min('image_date'))
         monument.first_image_date = aggregates['first_image_date']
+
+        aggregates = monument.pictures.filter(image_type="commons").aggregate(first_image_date=models.Min('image_date'))
+        monument.first_image_date_commons = aggregates['first_image_date']
+        
         monument.save()
 
     return monument
