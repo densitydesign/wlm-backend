@@ -49,18 +49,20 @@ def get_date_snap(monuments_qs, date, group=None):
     out = monuments_qs.annotate(
         national=models.Value("1"),
         national_name=models.Value("Italy"),
-        
-        date = models.Value(date),
-        on_wiki = models.Case(
-            models.When(first_revision__lte=date, then=models.Value(1)),
-            default=models.Value(0),
-        ),
-        in_contest = models.Case(
-            models.When(first_revision__lte=date, start__lte=date, then=models.Value(1)),
-            default=models.Value(0),
-        ),
         photographed = models.Case(
-            models.When(first_revision__lte=date, start__lte=date, first_image_date__lte=date, then=models.Value(1)),
+            models.When(first_image_date__lte=date, then=models.Value(1)),
+            default=models.Value(0),
+        ),
+        date = models.Value(date),
+        
+    ).annotate(
+        in_contest = models.Case(
+            models.When(start__lte=date, photographed=0, then=models.Value(1)),
+            default=models.Value(0),
+        )
+    ).annotate(
+        on_wiki = models.Case(
+            models.When(first_revision__lte=date, photographed=0, in_contest=0, then=models.Value(1)),
             default=models.Value(0),
         ),
     )
@@ -73,8 +75,11 @@ def get_date_snap(monuments_qs, date, group=None):
 
     out = out.values(*values).order_by().annotate(
         on_wiki=models.Sum('on_wiki', default=0),
-        in_contest=models.Sum('in_contest', default=0),
+        in_contestx=models.Sum('in_contest', default=0),
         photographed=models.Sum('photographed', default=0),
+    ).annotate(
+        in_contest=models.ExpressionWrapper(models.F('in_contestx') + models.F('photographed'), output_field=models.IntegerField()),
+        on_wiki=models.ExpressionWrapper(models.F('in_contestx') + models.F('photographed') + models.F('on_wiki'), output_field=models.IntegerField()),
     )
     
     values_final = ['on_wiki', 'in_contest', 'photographed', 'date']
@@ -98,7 +103,7 @@ def get_snap(monuments_qs, date_from, date_to, step_size=1, step_unit="month", g
     start = date_from
     dates = [start]
     
-    while start  <= date_to:
+    while start  < date_to:
         start += relativedelta(**{step_unit: step_size})
         dates.append(start)
         if len(dates) > 50:
@@ -260,7 +265,7 @@ def parse_point(point_str):
     return point_str.upper().replace("POINT(", "").replace(")", "").split(" ")
 
 @transaction.atomic
-def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_geo=False, category_only=True):
+def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_geo=False, category_only=True, reset_pictures=False):
     category = category_snapshot.category
     label = category.label
 
@@ -270,7 +275,7 @@ def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_
 
     try:
         monument = Monument.objects.get(q_number=code)
-        if monument.snapshot == category_snapshot.snapshot or category_only:
+        if not reset_pictures and monument.snapshot == category_snapshot.snapshot or category_only:
             monument.categories.add(category)
             logger.log(logging.INFO, f"Skipping monument {code}")
             return monument
@@ -339,22 +344,30 @@ def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_
 
     monument.categories.add(category)
 
-    if not skip_pictures and wlm_n:
-        logger.info(f"Updating pictures for {code}")
-        images = search_commons_wlm(wlm_n)
-        for image in images:
-            update_image(monument, image, 'wlm')
+    if reset_pictures:
+        logger.info(f"resetting pictures for {code}")
+        monument.pictures.all().delete()
+        monument.first_image_date = None
+        monument.first_image_date_commons = None
 
-        #todo: process relevant image
+    if not skip_pictures:
+        logger.info(f"Updating pictures for {code}")
+        #relevant image
         for relevant_image_url in relevant_images:
             relevant_images_data = search_commons_url(relevant_image_url)
             for image in relevant_images_data:
                 update_image(monument, image, 'commons')
 
+        if wlm_n:
+            images = search_commons_wlm(wlm_n)
+            for image in images:
+                update_image(monument, image, 'wlm')
+
+
         aggregates = monument.pictures.filter(image_type="wlm").aggregate(first_image_date=models.Min('image_date'))
         monument.first_image_date = aggregates['first_image_date']
 
-        aggregates = monument.pictures.filter(image_type="commons").aggregate(first_image_date=models.Min('image_date'))
+        aggregates = monument.pictures.all().aggregate(first_image_date=models.Min('image_date'))
         monument.first_image_date_commons = aggregates['first_image_date']
         
         monument.save()
@@ -362,15 +375,15 @@ def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_
     return monument
 
 
-def update_category(monuments, category_snapshot, skip_pictures=False, skip_geo=False, category_only=False):
+def update_category(monuments, category_snapshot, skip_pictures=False, skip_geo=False, category_only=False,  reset_pictures=False):
     for monument in monuments:
         try:
-            update_monument(monument, category_snapshot, skip_pictures=skip_pictures, skip_geo=skip_geo, category_only=category_only)
+            update_monument(monument, category_snapshot, skip_pictures=skip_pictures, skip_geo=skip_geo, category_only=category_only, reset_pictures=reset_pictures)
         except Exception as e:
             logger.exception(e)
     
 
-def process_category_snapshot(cat_snapshot, skip_pictures=False, skip_geo=False, category_only=False):
+def process_category_snapshot(cat_snapshot, skip_pictures=False, skip_geo=False, category_only=False, reset_pictures=False):
     logger.info(f"process_category_snapshot {cat_snapshot.category.label}")
     if not cat_snapshot.payload:
         logger.info(f"running sparql for {cat_snapshot.category.label}")
@@ -379,7 +392,7 @@ def process_category_snapshot(cat_snapshot, skip_pictures=False, skip_geo=False,
         cat_snapshot.payload = data
         cat_snapshot.save()
     monuments = [format_monument(x) for x in cat_snapshot.payload]
-    update_category(monuments, cat_snapshot, skip_pictures=skip_pictures, skip_geo=skip_geo, category_only=category_only)
+    update_category(monuments, cat_snapshot, skip_pictures=skip_pictures, skip_geo=skip_geo, category_only=category_only, reset_pictures=reset_pictures)
     
 
 
@@ -426,7 +439,7 @@ def update_geo_areas():
         
 
 
-def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, category_only=False):
+def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, category_only=False, reset_pictures=True):
     """
     New monuments + Update to monuments data
     New Approved/Unapproved monuments
@@ -450,6 +463,8 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
         
         category = Category.objects.get_or_create(label=item["label"])[0]
         category.q_number = item["q_number"]
+        if "group" in item:
+            category.group = item["group"]
         category.save()
 
         if "query_file" in item:
@@ -467,7 +482,7 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
     for cat_snapshot in categories_snapshots:
         if cat_snapshot.complete:
             continue
-        process_category_snapshot(cat_snapshot, skip_pictures=skip_pictures, skip_geo=skip_geo, category_only=category_only)
+        process_category_snapshot(cat_snapshot, skip_pictures=skip_pictures, skip_geo=skip_geo, category_only=category_only, reset_pictures=reset_pictures)
         cat_snapshot.complete = True
         cat_snapshot.save()
 

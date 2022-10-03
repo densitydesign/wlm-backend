@@ -31,6 +31,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'clearcache',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -199,6 +200,7 @@ RQ_SHOW_ADMIN_LINK = True
 
 CRON_JOB_HANLDERS = {
     'take_snapshot': 'main.job_handlers.enqueue_take_snapshot',
+    'take_snapshot_reset_pics': 'main.job_handlers.enqueue_take_snapshot_reset_pics',
 }
 
 CORS_ALLOW_ALL_ORIGINS = True

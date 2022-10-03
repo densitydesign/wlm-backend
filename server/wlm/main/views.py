@@ -18,9 +18,11 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.http import condition
 from django.views.decorators.cache import cache_control, cache_page
 from django.conf import settings
+from rest_framework.exceptions import NotFound
 
 
-def get_last_import(request):
+
+def get_last_import(request, **kwargs):
     """
     Last-modified logic computation
     """
@@ -48,8 +50,8 @@ def get_history(monuments_qs, query_params, group=None):
     return history, ser.validated_data
 
 
-@method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
-@method_decorator(cache_control(max_age=0, public=True), name="dispatch")
+#@method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
+#@method_decorator(cache_control(max_age=0, public=True), name="dispatch")
 @method_decorator(cache_page(None, cache="views"), name="dispatch")
 class DomainView(APIView):
     def get(self, request):
@@ -69,8 +71,8 @@ class DomainView(APIView):
 
 
 
-@method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
-@method_decorator(cache_control(max_age=0, public=True), name="dispatch")
+#@method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
+#@method_decorator(cache_control(max_age=0, public=True), name="dispatch")
 @method_decorator(cache_page(None, cache="views"), name="dispatch")
 class RegionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Region.objects.all()
@@ -138,8 +140,8 @@ class RegionViewSet(viewsets.ReadOnlyModelViewSet):
     #     return Response(MonumentSmallSerializer(monuments_qs, many=True).data)
 
 
-@method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
-@method_decorator(cache_control(max_age=0, public=True), name="dispatch")
+#@method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
+#@method_decorator(cache_control(max_age=0, public=True), name="dispatch")
 @method_decorator(cache_page(None, cache="views"), name="dispatch")
 class ProvinceViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Province.objects.all()
@@ -190,8 +192,8 @@ class ProvinceViewSet(viewsets.ReadOnlyModelViewSet):
     #     return Response(MonumentSmallSerializer(monuments_qs, many=True).data)
 
 
-@method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
-@method_decorator(cache_control(max_age=0, public=True), name="dispatch")
+#@method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
+#@method_decorator(cache_control(max_age=0, public=True), name="dispatch")
 @method_decorator(cache_page(None, cache="views"), name="dispatch")
 class MunicipalityViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Municipality.objects.all()
@@ -220,27 +222,79 @@ class StandardResultsSetPagination(PageNumberPagination):
     max_page_size = 1000
 
 
+class Y(filters.ModelChoiceFilter):
+    def filter(self, qs, value):
+        raise
+        if value:
+            return qs.filter(**{self.field_name: value})
+        return qs
+
 class MonumentFilter(filters.FilterSet):
     #photographed = filters.BooleanFilter(method='filter_photographed')
     #on_wiki = filters.BooleanFilter(method='filter_on_wiki')
     #in_contest = filters.BooleanFilter(method='filter_in_contest')
     theme = filters.CharFilter(method='filter_theme')
+    region = filters.CharFilter(method='filter_region')
+    province = filters.CharFilter(method='filter_province')
+    municipality = filters.CharFilter(method='filter_municipality')
 
+    def filter_region(self, qs, name, value):
+        if(value=='0'):
+            return qs.filter(region__isnull=True)
+        return qs.filter(region__code=value)
+
+    def filter_province(self, qs, name, value):
+        if(value=='0'):
+            return qs.filter(province__isnull=True)
+        return qs.filter(province__code=value)
+
+    def filter_municipality(self, qs, name, value):
+        if(value=='0'):
+            return qs.filter(municipality__isnull=True)
+        return qs.filter(municipality__code=value)
+    
     def filter_theme(self, queryset, name, value):
         return queryset.filter(categories__pk=value)
+
+    ordering = filters.OrderingFilter(
+        # tuple-mapping retains order
+        fields=(
+            ('wlm_n', 'wlm_id'),
+            ('q_number', 'q_number'),
+            ('label', 'label'),
+            ('start', 'wlm_auth_start_date'),
+            ('end', 'wlm_auth_end_date'),
+            ('first_image_date', 'first_wlm_image_date'),
+            ('first_image_date_commons', 'first_commons_image_date'),
+            ('municipality_label', 'municipality__name'),
+            ('province_label', 'province__name'),
+            ('region_label', 'region__name'),
+        ),
+    )
+
+  
+    
     class Meta:
         model = Monument
         fields = ['region', 'province', 'municipality', 'theme']
-
+        
 
 @method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
 @method_decorator(cache_control(max_age=0, public=True), name="dispatch")
 @method_decorator(cache_page(None, cache="views"), name="dispatch")
 class MonumentViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Monument.objects.all()
+    queryset = Monument.objects.all().select_related('region', 'province', 'municipality')
     serializer_class = MonumentSerializer
     pagination_class = StandardResultsSetPagination
     filterset_class = MonumentFilter
+
+    @action(methods=["get"], detail=False, url_path="by-q/(?P<q>[^/.]+)")
+    def byq(self, request, q=None):
+        try:
+            mon = Monument.objects.get(q_number=q)
+        except:
+            raise NotFound()
+        return Response(MonumentSerializer(mon).data)
     
 
 @method_decorator(condition(last_modified_func=get_last_import), name="dispatch")

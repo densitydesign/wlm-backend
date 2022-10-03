@@ -6,7 +6,6 @@ admin.site.register(Province)
 admin.site.register(Municipality)
 admin.site.register(Category)
 
-
 class PictureAdmin(admin.ModelAdmin):
     raw_id_fields = ("monument",)
 admin.site.register(Picture, PictureAdmin)
@@ -34,3 +33,5 @@ class MonumentAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Monument, MonumentAdmin)
+
+

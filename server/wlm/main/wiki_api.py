@@ -22,9 +22,9 @@ def load_wiki_candidate_types():
 WIKI_CANDIDATE_TYPES = load_wiki_candidate_types()
 
 WLM_QUERIES = [
-    {"label": "contest", "query_file" : "SPARQL-contest.txt", "q_number": "W0"},
-    {"label": "municipalities-views", "query_file" : "SPARQL-municipalities-views.txt", "q_number": "W1"},
-    {"label": "fortifications", "query_file" : "SPARQL-fortifications.txt", "q_number": "W2"},
+    {"label": "in contest", "query_file" : "SPARQL-contest.txt", "q_number": "W0", "group": "Contest"},
+    {"label": "municipality overview picture", "query_file" : "SPARQL-municipalities-views.txt", "q_number": "W1", "group": "Contest"},
+    {"label": "fortificazioni (IIC 2022)", "query_file" : "SPARQL-fortifications.txt", "q_number": "W2", "group": "Contest"},
 ]
 
 def get_wlm_query(query_file):
@@ -82,6 +82,7 @@ def search_commons_url(url):
     }
     params = "&".join("%s=%s" % (k,v) for k,v in payload.items())
     r = requests.get(COMMONS_URL, params)
+    data = r.json()
     
     if "query" in data and "pages" in data["query"] and len(data["query"]["pages"]) > 0:
         images_data_clean = []
@@ -113,7 +114,8 @@ def search_commons_wlm(wlm_id):
         "generator": "search",
         "iiprop": "extmetadata",
         "gsrsearch": '"' + wlm_id + '"',
-        "gsrnamespace": "6"
+        "gsrnamespace": "6",
+        "gsrlimit": "500",
     }
     r = requests.get(COMMONS_URL, params)
     data = r.json()

@@ -19,6 +19,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, Spec
 from django.conf import settings
 
 urlpatterns = [
+    path('admin/clearcache/', include('clearcache.urls')),
     path('admin/', admin.site.urls),
     path('api/', include('main.urls')),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
