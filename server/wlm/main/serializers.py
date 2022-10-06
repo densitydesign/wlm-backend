@@ -123,6 +123,8 @@ class MonumentSerializer(serializers.ModelSerializer):
             "municipality_label",
             "province_label",
             "region_label",
+            "current_wlm_state",
+            "current_commons_state",
         ]
 
 

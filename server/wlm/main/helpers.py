@@ -166,7 +166,7 @@ def get_snap(monuments_qs, date_from, date_to, step_size=1, step_unit="month", g
         keys_map  = OrderedDict({
                 "photographed": "photographed",
                 "in_contest": "inContest",
-                "on_wiki" : "onWIki",
+                "on_wiki" : "onWiki",
             })
     else:
         keys_map  = OrderedDict({
@@ -422,7 +422,21 @@ def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_
         aggregates = monument.pictures.all().aggregate(first_image_date=models.Min('image_date'))
         monument.first_image_date_commons = aggregates['first_image_date']
         
-        monument.save()
+    
+    #updating current states
+    if monument.first_image_date and monument.first_image_date <= monument.snapshot.created:
+        monument.current_wlm_state = 'photographed'
+    elif monument.start and monument.start <= monument.snapshot.created:
+        monument.current_wlm_state = 'inContest'
+    else:
+        monument.current_wlm_state = 'onWiki'
+
+    if monument.first_image_date_commons and monument.first_image_date_commons <= monument.snapshot.created:
+        monument.current_commons_state = 'withPicture'
+    else:
+        monument.current_commons_state = 'onWikidataOnly'
+    
+    monument.save()
 
     return monument
 
