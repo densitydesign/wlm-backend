@@ -50,8 +50,8 @@ def get_history(monuments_qs, query_params, group=None):
     return history, ser.validated_data
 
 
-#@method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
-#@method_decorator(cache_control(max_age=0, public=True), name="dispatch")
+@method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
+@method_decorator(cache_control(max_age=0, public=True), name="dispatch")
 @method_decorator(cache_page(None, cache="views"), name="dispatch")
 class DomainView(APIView):
     def get(self, request):
@@ -71,8 +71,8 @@ class DomainView(APIView):
 
 
 
-#@method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
-#@method_decorator(cache_control(max_age=0, public=True), name="dispatch")
+@method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
+@method_decorator(cache_control(max_age=0, public=True), name="dispatch")
 @method_decorator(cache_page(None, cache="views"), name="dispatch")
 class RegionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Region.objects.all()
@@ -140,8 +140,8 @@ class RegionViewSet(viewsets.ReadOnlyModelViewSet):
     #     return Response(MonumentSmallSerializer(monuments_qs, many=True).data)
 
 
-#@method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
-#@method_decorator(cache_control(max_age=0, public=True), name="dispatch")
+@method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
+@method_decorator(cache_control(max_age=0, public=True), name="dispatch")
 @method_decorator(cache_page(None, cache="views"), name="dispatch")
 class ProvinceViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Province.objects.all()
@@ -192,8 +192,8 @@ class ProvinceViewSet(viewsets.ReadOnlyModelViewSet):
     #     return Response(MonumentSmallSerializer(monuments_qs, many=True).data)
 
 
-#@method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
-#@method_decorator(cache_control(max_age=0, public=True), name="dispatch")
+@method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
+@method_decorator(cache_control(max_age=0, public=True), name="dispatch")
 @method_decorator(cache_page(None, cache="views"), name="dispatch")
 class MunicipalityViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Municipality.objects.all()
