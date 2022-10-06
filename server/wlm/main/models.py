@@ -106,6 +106,8 @@ class Monument(models.Model):
     first_image_date = models.DateField(blank=True, null=True)
     first_image_date_commons = models.DateField(blank=True, null=True)
 
+    current_wlm_state = models.CharField(blank=True, default='', max_length=20)
+    current_commons_state = models.CharField(blank=True, default='', max_length=20)
     
     class Meta:
         index_together = [
