@@ -333,7 +333,7 @@ def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_
 
     except Monument.DoesNotExist:
         monument = Monument.objects.create(q_number=code)
-
+    
     logger.log(logging.INFO, f"Updating monument {code}")
 
     label = monument_prop(monument_data, "monLabel", "")
@@ -344,7 +344,7 @@ def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_
 
     relevant_images = monument_data.get("relevantImage_n", [])
 
-
+    
     geo_n = monument_prop(monument_data, "geo_n", None)
     try:
         coords = parse_point(geo_n)
@@ -376,7 +376,6 @@ def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_
         first_revision = monument.first_revision
 
     
-
     Monument.objects.filter(pk=monument.pk).update(
         label=label,
         wlm_n=wlm_n,
@@ -392,6 +391,8 @@ def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_
         parent_q_number=parent_q_number,
         relevant_images=relevant_images,
     )
+    # we must reload the record or we referece the old one, possibly not updated
+    monument = Monument.objects.get(pk=monument.pk)
 
     monument.categories.add(category)
 
