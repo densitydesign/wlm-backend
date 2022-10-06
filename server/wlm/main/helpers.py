@@ -38,13 +38,7 @@ from django.contrib.gis.db.models.functions import Centroid
 
 logger = logging.getLogger(__name__)
 
-def get_date_snap(monuments_qs, date, group=None):
-
-    first_image = Picture.objects.filter(
-            monument__pk=models.OuterRef('pk'),
-        ).order_by().values('monument__pk').annotate(
-            first_image=models.Min('image_date', default=None),
-        ).values('first_image')[:1]
+def get_date_snap_wlm(monuments_qs, date, group=None):
 
     out = monuments_qs.annotate(
         national=models.Value("1"),
@@ -94,7 +88,52 @@ def get_date_snap(monuments_qs, date, group=None):
     return out
 
 
-def get_snap(monuments_qs, date_from, date_to, step_size=1, step_unit="month", group=None):
+
+def get_date_snap_commons(monuments_qs, date, group=None):
+
+    out = monuments_qs.annotate(
+        national=models.Value("1"),
+        national_name=models.Value("Italy"),
+        with_picture = models.Case(
+            models.When(first_image_date__lte=date, then=models.Value(1)),
+            default=models.Value(0),
+        ),
+        date = models.Value(date),
+        
+    ).annotate(
+        on_wiki = models.Case(
+            models.When(first_revision__lte=date, with_picture=0, then=models.Value(1)),
+            default=models.Value(0),
+        ),
+    )
+    
+    if group:
+        values = group if type(group) is list else [group]
+        values = values + ['date']
+    else:
+        values = ['date']
+
+    out = out.values(*values).order_by().annotate(
+        on_wiki=models.Sum('on_wiki', default=0),
+        with_picture=models.Sum('with_picture', default=0),
+    ).annotate(
+        on_wiki=models.ExpressionWrapper(models.F('with_picture') + models.F('on_wiki'), output_field=models.IntegerField()),
+    )
+    
+    values_final = ['on_wiki', 'with_picture', 'date']
+    if group:
+        if type(group) is list:
+            values_final += group
+        else:
+            values_final.append(group)
+    
+    out = out.values(*values_final)
+
+    return out
+
+
+
+def get_snap(monuments_qs, date_from, date_to, step_size=1, step_unit="month", group=None, mode='wlm'):
     """
     Please note that "group" parameter is not so `free` as it seems.
     (see format_history method)
@@ -112,16 +151,28 @@ def get_snap(monuments_qs, date_from, date_to, step_size=1, step_unit="month", g
 
     out = []
     for date in dates:
-        date_snap = get_date_snap(monuments_qs, date, group=group)
+        if mode == 'wlm':
+            date_snap = get_date_snap_wlm(monuments_qs, date, group=group)
+        elif mode == 'commons':
+            date_snap = get_date_snap_commons(monuments_qs, date, group=group)
+        else:
+            raise ValueError(f"Invalid mode: {mode} should be 'wlm' or 'commons'")
+        
         out.append(date_snap)
 
     flat_list = [item for sublist in out for item in sublist]
 
-    keys_map  = OrderedDict({
-            "photographed": "photographed",
-            "in_contest": "inContest",
-            "on_wiki" : "onWIki",
-        })
+    if mode == 'wlm':
+        keys_map  = OrderedDict({
+                "photographed": "photographed",
+                "in_contest": "inContest",
+                "on_wiki" : "onWIki",
+            })
+    else:
+        keys_map  = OrderedDict({
+                "with_picture": "withPicture",
+                "on_wiki" : "onWikidataOnly",
+            })
     
     return {
         "data": format_history(flat_list, keys_map),

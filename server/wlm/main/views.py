@@ -33,7 +33,7 @@ def get_last_import(request, **kwargs):
     return agg["last_import"]
     
 
-def get_history(monuments_qs, query_params, group=None):
+def get_history(monuments_qs, query_params, group=None, mode='wlm'):
     ser = WLMQuerySerializer(data=query_params)
     ser.is_valid(raise_exception=True)
     
@@ -46,7 +46,7 @@ def get_history(monuments_qs, query_params, group=None):
     if theme:
         monuments_qs = monuments_qs.filter(categories__pk=theme)
     
-    history = get_snap(monuments_qs, date_from, date_to, step_size=step_size, step_unit=step_unit, group=group)
+    history = get_snap(monuments_qs, date_from, date_to, step_size=step_size, step_unit=step_unit, group=group, mode=mode)
     return history, ser.validated_data
 
 
@@ -109,12 +109,26 @@ class RegionViewSet(viewsets.ReadOnlyModelViewSet):
         history, validated_data = get_history(monuments_qs, request.query_params, group=['national', 'national_name'])
         return Response(history)
 
+    @extend_schema(parameters=[WLMQuerySerializer])
+    @action(methods=["get"], detail=False, url_path="commons-aggregate")
+    def commons_aggregate(self, request, pk=None):
+        monuments_qs = Monument.objects.all()
+        history, validated_data = get_history(monuments_qs, request.query_params, group=['national', 'national_name'], mode='commons')
+        return Response(history)
+
 
     @extend_schema(parameters=[WLMQuerySerializer])
     @action(methods=["get"], detail=False, url_path="wlm-regions")
     def wlm_regions(self, request, pk=None):
         monuments_qs = Monument.objects.all()
         history, validated_data = get_history(monuments_qs, request.query_params, group=['region', 'region__name'])
+        return Response(history)
+
+    @extend_schema(parameters=[WLMQuerySerializer])
+    @action(methods=["get"], detail=False, url_path="commons-regions")
+    def commons_regions(self, request, pk=None):
+        monuments_qs = Monument.objects.all()
+        history, validated_data = get_history(monuments_qs, request.query_params, group=['region', 'region__name'], mode='commons')
         return Response(history)
         
     @extend_schema(parameters=[WLMQuerySerializer])
@@ -126,11 +140,27 @@ class RegionViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(history)
 
     @extend_schema(parameters=[WLMQuerySerializer])
+    @action(methods=["get"], detail=True)
+    def commons(self, request, pk=None):
+        area = self.get_object()
+        monuments_qs = area.monuments.all()
+        history, validated_data = get_history(monuments_qs, request.query_params, group=['region', 'region__name'], mode='commons')
+        return Response(history)
+
+    @extend_schema(parameters=[WLMQuerySerializer])
     @action(methods=["get"], detail=True, url_path='wlm-areas')
     def wlm_areas(self, request, pk=None):
         area = self.get_object()
         monuments_qs = area.monuments.all()
         history, validated_data = get_history(monuments_qs, request.query_params, group=['province', 'province__name'])
+        return Response(history)
+
+    @extend_schema(parameters=[WLMQuerySerializer])
+    @action(methods=["get"], detail=True, url_path='commons-areas')
+    def commons_areas(self, request, pk=None):
+        area = self.get_object()
+        monuments_qs = area.monuments.all()
+        history, validated_data = get_history(monuments_qs, request.query_params, group=['province', 'province__name'], mode='commons')
         return Response(history)
 
     # @action(methods=["get"], detail=True)
@@ -177,11 +207,27 @@ class ProvinceViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(history)
 
     @extend_schema(parameters=[WLMQuerySerializer])
+    @action(methods=["get"], detail=True)
+    def commons(self, request, pk=None):
+        area = self.get_object()
+        monuments_qs = area.monuments.all()
+        history, validated_data = get_history(monuments_qs, request.query_params, group=['province', 'province__name'], mode='commons')
+        return Response(history)
+
+    @extend_schema(parameters=[WLMQuerySerializer])
     @action(methods=["get"], detail=True, url_path='wlm-areas')
     def wlm_areas(self, request, pk=None):
         area = self.get_object()
         monuments_qs = area.monuments.all()
         history, validated_data = get_history(monuments_qs, request.query_params, group=['municipality', 'municipality__name'])
+        return Response(history)
+
+    @extend_schema(parameters=[WLMQuerySerializer])
+    @action(methods=["get"], detail=True, url_path='commons-areas')
+    def commons_areas(self, request, pk=None):
+        area = self.get_object()
+        monuments_qs = area.monuments.all()
+        history, validated_data = get_history(monuments_qs, request.query_params, group=['municipality', 'municipality__name'], mode='commons')
         return Response(history)
     
 
@@ -208,6 +254,15 @@ class MunicipalityViewSet(viewsets.ReadOnlyModelViewSet):
         monuments_qs = area.monuments.all()
         history, validated_data = get_history(monuments_qs, request.query_params, group=['municipality', 'municipality__name'])
         return Response(history)
+
+    @extend_schema(parameters=[WLMQuerySerializer])
+    @action(methods=["get"], detail=True)
+    def commons(self, request, pk=None):
+        area = self.get_object()
+        monuments_qs = area.monuments.all()
+        history, validated_data = get_history(monuments_qs, request.query_params, group=['municipality', 'municipality__name'], mode='commons')
+        return Response(history)
+
 
     # @action(methods=["get"], detail=True)
     # def monuments(self, request, pk=None):

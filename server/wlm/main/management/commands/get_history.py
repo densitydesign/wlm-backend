@@ -1,7 +1,7 @@
 from turtle import update
 from main.models import Region
 from django.core.management.base import BaseCommand, CommandError
-from main.helpers import get_date_snap
+from main.helpers import get_date_snap_wlm
 import datetime
 
 
@@ -23,7 +23,7 @@ class Command(BaseCommand):
         
         reg = options['region']
         monuments = reg.monuments.all()
-        snap = get_date_snap(monuments, options['date'])
+        snap = get_date_snap_wlm(monuments, options['date'])
         print(snap)
         
 
