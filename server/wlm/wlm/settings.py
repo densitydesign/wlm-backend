@@ -231,6 +231,9 @@ INTERNAL_IPS = [
 #override in localsettings to enable caching with last-modified header
 HTTP_CONDITIONAL_CACHE = False
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 
 try:
     from .localsettings import * # noqa

@@ -5,6 +5,9 @@ class Snapshot(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
     complete = models.BooleanField(default=False)
+
+    csv_export = models.FileField(upload_to="csv_exports", null=True, blank=True)
+    xlsx_export = models.FileField(upload_to="xlsx_exports", null=True, blank=True)
     
     def __str__(self):
         return f"{self.created}"

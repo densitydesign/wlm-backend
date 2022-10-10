@@ -36,7 +36,6 @@ class Command(BaseCommand):
             print("No monument found")
             return
         mon = mons[0]
-        print(mon)
 
         update_monument(mon, c, skip_pictures=options['skip_pictures'], skip_geo=options['skip_geo'], reset_pictures=options['reset_pictures'], category_only=options['category_only'])
 
