@@ -95,7 +95,7 @@ def get_date_snap_commons(monuments_qs, date, group=None):
         national=models.Value("1"),
         national_name=models.Value("Italy"),
         with_picture = models.Case(
-            models.When(first_image_date__lte=date, then=models.Value(1)),
+            models.When(first_image_date_commons__lte=date, then=models.Value(1)),
             default=models.Value(0),
         ),
         date = models.Value(date),
@@ -328,7 +328,7 @@ def update_monument(monument_data, category_snapshot, skip_pictures=False, skip_
         monument = Monument.objects.get(q_number=code)
         if not reset_pictures and monument.snapshot == category_snapshot.snapshot or category_only:
             monument.categories.add(category)
-            logger.log(logging.INFO, f"Skipping monument {code}")
+            logger.log(logging.INFO, f"Skipping monument {code} - already updated in this snapshot")
             return monument
 
     except Monument.DoesNotExist:
