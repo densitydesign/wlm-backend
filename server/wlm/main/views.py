@@ -1,4 +1,5 @@
 from django.core.cache import cache
+from django.http import HttpResponseRedirect
 from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.decorators import action
@@ -66,8 +67,16 @@ class DomainView(APIView):
             last_date = last_snapshot.created.date()
         else:
             last_date = None
+
+        full_xlsx_url = None
+        if last_snapshot is not None and last_snapshot.xlsx_export:
+            full_xlsx_url = last_snapshot.xlsx_export.url
         
-        return Response({"themes" : cat_serializer.data, "last_snapshot": last_date})
+        full_csv_url = None
+        if last_snapshot is not None and last_snapshot.csv_export:
+            full_csv_url = last_snapshot.csv_export.url
+        
+        return Response({"themes" : cat_serializer.data, "last_snapshot": last_date, "full_xlsx_url": full_xlsx_url, "full_csv_url": full_csv_url})
 
 
 
@@ -350,6 +359,33 @@ class MonumentViewSet(viewsets.ReadOnlyModelViewSet):
         except:
             raise NotFound()
         return Response(MonumentSerializer(mon).data)
+
+
+    @action(methods=["get"], detail=False)
+    def csv(self, request):
+        try:
+            last_snapshot = Snapshot.objects.filter(complete=True).latest('created')
+        except Snapshot.DoesNotExist:
+            last_snapshot = None
+        
+        if last_snapshot is None or last_snapshot.csv_export is None:
+            return Response(status=404)
+
+        url = request.build_absolute_uri(last_snapshot.csv_export.url)
+        return HttpResponseRedirect(url)
+
+    @action(methods=["get"], detail=False)
+    def xlsx(self, request):
+        try:
+            last_snapshot = Snapshot.objects.filter(complete=True).latest('created')
+        except Snapshot.DoesNotExist:
+            last_snapshot = None
+        
+        if last_snapshot is None or last_snapshot.xlsx_export is None:
+            return Response(status=404)
+
+        url = request.build_absolute_uri(last_snapshot.xlsx_export.url)
+        return HttpResponseRedirect(url)
     
 
 @method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
