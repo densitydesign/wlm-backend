@@ -388,12 +388,20 @@ def update_monument(
     monument_data, category_snapshot, skip_pictures=False, skip_geo=False, category_only=True, reset_pictures=False
 ):
     category = category_snapshot.category
-    #label = category.label
-
+    
     code = monument_data.get("mon", None)
     if not code:
         raise ValueError("CANNOT UPDATE MONUMENT")
 
+    try:
+        monument = Monument.objects.get(q_number=code, snapshot=category_snapshot.snapshot)
+        monument.categories.add(category)
+        logger.log(logging.INFO, f"Skipping update for monument {code} - already updated in this snapshot")
+        return monument
+
+    except Monument.DoesNotExist:
+        pass
+    
     # try:
     #     monument = Monument.objects.get(q_number=code)
     #     if not reset_pictures and monument.snapshot == category_snapshot.snapshot or category_only:
