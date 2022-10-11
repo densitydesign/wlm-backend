@@ -165,8 +165,9 @@ def compute_dates(date_from, date_to, step_size, step_unit):
             dates.append(start)
             if len(dates) > 50:
                 raise APIException("Too many dates (max 50)")
-        prev_date = start - timedelta(days=1)
-        dates.insert(0, prev_date)
+        if len(dates):
+            prev_date = start - timedelta(days=1)
+            dates.insert(0, prev_date)
 
     elif step_unit == 'months':
         dates_strings =  OrderedDict(((date_from + timedelta(_)).strftime(r"%m-%Y"), None) for _ in range((date_to - date_from).days)).keys()
@@ -176,9 +177,10 @@ def compute_dates(date_from, date_to, step_size, step_unit):
             new_date = date(year, month, last_day)
             if(new_date <= date_to):
                 dates.append(new_date)
-        prev_date = dates[0] - relativedelta(months=1)
-        _, last_day = calendar.monthrange(prev_date.year, prev_date.month)
-        dates.insert(0, date(prev_date.year, prev_date.month, last_day))
+        if len(dates):        
+            prev_date = dates[0] - relativedelta(months=1)
+            _, last_day = calendar.monthrange(prev_date.year, prev_date.month)
+            dates.insert(0, date(prev_date.year, prev_date.month, last_day))
 
     elif step_unit == 'years':
         dates_strings =  OrderedDict(((date_from + timedelta(_)).strftime(r"%Y"), None) for _ in range((date_to - date_from).days)).keys()
@@ -187,8 +189,9 @@ def compute_dates(date_from, date_to, step_size, step_unit):
             new_date = date(year, 12, 31)
             if(new_date <= date_to):
                 dates.append(new_date)
-        prev_date = dates[0] - relativedelta(years=1)
-        dates.insert(0, date(prev_date.year, 12, 31))
+        if len(dates):
+            prev_date = dates[0] - relativedelta(years=1)
+            dates.insert(0, date(prev_date.year, 12, 31))
 
     return dates
 
@@ -285,7 +288,7 @@ def format_history(history, keys_map):
     out_dict = functools.reduce(reducer, history, {})
 
     def make_entry(dict_entry):
-        return {**dict_entry["meta"], "history": dict_entry["data"]}
+        return {**dict_entry["meta"], "history": dict_entry["data"][1:], "previous": dict_entry["data"][0]}
 
     # sorting entries with respect to the last value of the "on_wiki" data point (areas with more monuments on wiki are on top)
     def get_max_value(key):
