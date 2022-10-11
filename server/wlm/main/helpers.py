@@ -8,7 +8,8 @@ import requests
 import io
 import zipfile
 import logging
-from datetime import datetime
+from datetime import date, timedelta
+import calendar
 from unicodedata import category
 from dateutil.relativedelta import relativedelta
 from rest_framework.exceptions import APIException
@@ -153,21 +154,54 @@ def get_date_snap_commons(monuments_qs, date, group=None):
     return out
 
 
+def compute_dates(date_from, date_to, step_size, step_unit):
+    start = date_from
+    dates = []
+    
+    if step_unit == 'days':
+        dates = [start]
+        while start  < date_to:
+            start += relativedelta(days=step_size)
+            dates.append(start)
+            if len(dates) > 50:
+                raise APIException("Too many dates (max 50)")
+        prev_date = start - timedelta(days=1)
+        dates.insert(0, prev_date)
+
+    elif step_unit == 'months':
+        dates_strings =  OrderedDict(((date_from + timedelta(_)).strftime(r"%m-%Y"), None) for _ in range((date_to - date_from).days)).keys()
+        for item in dates_strings:
+            month, year = [int(x) for x in item.split("-")]
+            _, last_day = calendar.monthrange(year, month)
+            new_date = date(year, month, last_day)
+            if(new_date <= date_to):
+                dates.append(new_date)
+        prev_date = dates[0] - relativedelta(months=1)
+        _, last_day = calendar.monthrange(prev_date.year, prev_date.month)
+        dates.insert(0, date(prev_date.year, prev_date.month, last_day))
+
+    elif step_unit == 'years':
+        dates_strings =  OrderedDict(((date_from + timedelta(_)).strftime(r"%Y"), None) for _ in range((date_to - date_from).days)).keys()
+        for item in dates_strings:
+            year = int(item)
+            new_date = date(year, 12, 31)
+            if(new_date <= date_to):
+                dates.append(new_date)
+        prev_date = dates[0] - relativedelta(years=1)
+        dates.insert(0, date(prev_date.year, 12, 31))
+
+    return dates
+
+
+
 def get_snap(monuments_qs, date_from, date_to, step_size=1, step_unit="month", group=None, mode="wlm"):
     """
     Please note that "group" parameter is not so `free` as it seems.
     (see format_history method)
     """
 
-    start = date_from
-    dates = [start]
-
-    while start < date_to:
-        start += relativedelta(**{step_unit: step_size})
-        dates.append(start)
-        if len(dates) > 50:
-            raise APIException("Too many dates (max 50)")
-
+    dates = compute_dates(date_from, date_to, step_size, step_unit)
+    
     out = []
     for date in dates:
         if mode == "wlm":
@@ -276,6 +310,7 @@ def format_history(history, keys_map):
     entries = [out_dict[key] for key in sorted(out_dict.keys(), key=get_max_value)]
     out = [make_entry(entry) for entry in entries]
     return out
+    return out[0], out[1:]
 
 
 def get_img_url(title):
