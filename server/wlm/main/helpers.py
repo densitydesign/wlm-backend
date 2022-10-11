@@ -1,4 +1,5 @@
 from cmath import inf
+from django.core.paginator import Paginator
 import tempfile
 import csv
 from typing import OrderedDict
@@ -8,7 +9,7 @@ import requests
 import io
 import zipfile
 import logging
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 import calendar
 from unicodedata import category
 from dateutil.relativedelta import relativedelta
@@ -157,10 +158,10 @@ def get_date_snap_commons(monuments_qs, date, group=None):
 def compute_dates(date_from, date_to, step_size, step_unit):
     start = date_from
     dates = []
-    
-    if step_unit == 'days':
+
+    if step_unit == "days":
         dates = [start]
-        while start  < date_to:
+        while start < date_to:
             start += relativedelta(days=step_size)
             dates.append(start)
             if len(dates) > 50:
@@ -169,32 +170,35 @@ def compute_dates(date_from, date_to, step_size, step_unit):
             prev_date = start - timedelta(days=1)
             dates.insert(0, prev_date)
 
-    elif step_unit == 'months':
-        dates_strings =  OrderedDict(((date_from + timedelta(_)).strftime(r"%m-%Y"), None) for _ in range((date_to - date_from).days)).keys()
+    elif step_unit == "months":
+        dates_strings = OrderedDict(
+            ((date_from + timedelta(_)).strftime(r"%m-%Y"), None) for _ in range((date_to - date_from).days)
+        ).keys()
         for item in dates_strings:
             month, year = [int(x) for x in item.split("-")]
             _, last_day = calendar.monthrange(year, month)
             new_date = date(year, month, last_day)
-            if(new_date <= date_to):
+            if new_date <= date_to:
                 dates.append(new_date)
-        if len(dates):        
+        if len(dates):
             prev_date = dates[0] - relativedelta(months=1)
             _, last_day = calendar.monthrange(prev_date.year, prev_date.month)
             dates.insert(0, date(prev_date.year, prev_date.month, last_day))
 
-    elif step_unit == 'years':
-        dates_strings =  OrderedDict(((date_from + timedelta(_)).strftime(r"%Y"), None) for _ in range((date_to - date_from).days)).keys()
+    elif step_unit == "years":
+        dates_strings = OrderedDict(
+            ((date_from + timedelta(_)).strftime(r"%Y"), None) for _ in range((date_to - date_from).days)
+        ).keys()
         for item in dates_strings:
             year = int(item)
             new_date = date(year, 12, 31)
-            if(new_date <= date_to):
+            if new_date <= date_to:
                 dates.append(new_date)
         if len(dates):
             prev_date = dates[0] - relativedelta(years=1)
             dates.insert(0, date(prev_date.year, 12, 31))
 
     return dates
-
 
 
 def get_snap(monuments_qs, date_from, date_to, step_size=1, step_unit="month", group=None, mode="wlm"):
@@ -204,7 +208,7 @@ def get_snap(monuments_qs, date_from, date_to, step_size=1, step_unit="month", g
     """
 
     dates = compute_dates(date_from, date_to, step_size, step_unit)
-    
+
     out = []
     for date in dates:
         if mode == "wlm":
@@ -384,21 +388,18 @@ def update_monument(
     monument_data, category_snapshot, skip_pictures=False, skip_geo=False, category_only=True, reset_pictures=False
 ):
     category = category_snapshot.category
-    label = category.label
+    #label = category.label
 
     code = monument_data.get("mon", None)
     if not code:
         raise ValueError("CANNOT UPDATE MONUMENT")
 
-    try:
-        monument = Monument.objects.get(q_number=code)
-        if not reset_pictures and monument.snapshot == category_snapshot.snapshot or category_only:
-            monument.categories.add(category)
-            logger.log(logging.INFO, f"Skipping monument {code} - already updated in this snapshot")
-            return monument
-
-    except Monument.DoesNotExist:
-        monument = Monument.objects.create(q_number=code)
+    # try:
+    #     monument = Monument.objects.get(q_number=code)
+    #     if not reset_pictures and monument.snapshot == category_snapshot.snapshot or category_only:
+    #         monument.categories.add(category)
+    #         logger.log(logging.INFO, f"Skipping monument {code} - already updated in this snapshot")
+    #         return monument
 
     logger.log(logging.INFO, f"Updating monument {code}")
 
@@ -420,9 +421,20 @@ def update_monument(
     except Exception as e:
         position = None
 
-    municipality = getattr(monument, "municipality", None)
-    province = getattr(monument, "province", None)
-    region = getattr(monument, "region", None)
+    first_revision = get_revision(code)
+
+    defaults = {
+        "label":label,
+        "wlm_n":wlm_n,
+        "start":start,
+        "end":end,
+        "position":position,
+        "data":monument_data,
+        "first_revision":first_revision,
+        "snapshot":category_snapshot.snapshot,
+        "parent_q_number":parent_q_number,
+        "relevant_images":relevant_images,
+    }
 
     if not skip_geo and position is not None:
         try:
@@ -432,32 +444,15 @@ def update_monument(
             municipality = municipality
             province = municipality.province
             region = province.region
+            defaults.update({"municipality":municipality, "province":province, "region":region})
         except Municipality.DoesNotExist:
             pass
 
-    if not monument.snapshot:
-        first_revision = get_revision(code)
-    else:
-        first_revision = monument.first_revision
-
-    Monument.objects.filter(pk=monument.pk).update(
-        label=label,
-        wlm_n=wlm_n,
-        start=start,
-        end=end,
-        position=position,
-        municipality=municipality,
-        province=province,
-        region=region,
-        data=monument_data,
-        first_revision=first_revision,
-        snapshot=category_snapshot.snapshot,
-        parent_q_number=parent_q_number,
-        relevant_images=relevant_images,
+    monument, created = Monument.objects.update_or_create(
+        q_number=code,
+        defaults=defaults
     )
-    # we must reload the record or we referece the old one, possibly not updated
-    monument = Monument.objects.get(pk=monument.pk)
-
+    
     monument.categories.add(category)
 
     if reset_pictures:
@@ -486,14 +481,15 @@ def update_monument(
         monument.first_image_date_commons = aggregates["first_image_date"]
 
     # updating current states
-    if monument.first_image_date and monument.first_image_date <= monument.snapshot.created:
+    monument.refresh_from_db()
+    if monument.first_image_date and monument.first_image_date <= monument.snapshot.created.date():
         monument.current_wlm_state = "photographed"
     elif monument.start and monument.start <= monument.snapshot.created:
         monument.current_wlm_state = "inContest"
     else:
         monument.current_wlm_state = "onWiki"
 
-    if monument.first_image_date_commons and monument.first_image_date_commons <= monument.snapshot.created:
+    if monument.first_image_date_commons and monument.first_image_date_commons <= monument.snapshot.created.date():
         monument.current_commons_state = "withPicture"
     else:
         monument.current_commons_state = "onWikidataOnly"
@@ -645,9 +641,9 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
     snapshot.save()
     snapshot.category_snapshots.all().delete()
 
-    #creating csv and xlsx full exports
+    # creating csv and xlsx full exports
     create_export(snapshot)
-    
+
     # clearing view cache
     caches["views"].clear()
 
@@ -817,11 +813,12 @@ class MonumentExportSerializer(serializers.ModelSerializer):
     wlm_auth_start_date = serializers.DateTimeField(source="start")
     wlm_auth_end_date = serializers.DateTimeField(source="end")
     position = serializers.SerializerMethodField()
+
     def get_position(self, obj):
         if obj.position:
             return f"{obj.position.y}, {obj.position.x}"
         return ""
-    
+
     wikidata_creation_date = serializers.DateTimeField(source="first_revision")
     first_commons_image_date = serializers.DateField(source="first_image_date_commons")
     first_wlm_image_date = serializers.DateField(source="first_image_date")
@@ -860,66 +857,12 @@ class MonumentExportSerializer(serializers.ModelSerializer):
 
 def serialize_monument_for_export(monument):
     serializer = MonumentExportSerializer(monument)
-    data = serializer.data
-    return [data.get(field, "") for field in EXPORT_MONUMENTS_HEADER]
+    return serializer.data
 
 
-def create_csv_export(snapshot):
-    """
-    Creates a CSV export of the snapshot
-    """
-    logger.info(f"creating csv export for snapshot {snapshot}")
-
-    with  tempfile.TemporaryFile("w+t") as csv_file:
-        csv_writer = csv.writer(csv_file, delimiter=";")
-
-        csv_writer.writerow(EXPORT_MONUMENTS_HEADER)
-        monuments = Monument.objects.filter(snapshot=snapshot, municipality__isnull=False).annotate(
-            pictures_count=models.Count("pictures"),
-            pictures_wlm_count=models.Count("pictures", filter=models.Q(pictures__image_type="wlm")),
-        ).iterator()
-        for monument in monuments:
-            row = serialize_monument_for_export(monument)
-            print(row)
-            csv_writer.writerow(row)
-
-        csv_file.seek(0)
-        file_wrapper = File(csv_file)
-        snapshot.csv_export.save("monuments.csv", file_wrapper)
-        snapshot.save()
-    
-    logger.info(f"created csv export for snapshot {snapshot}")
-
-
-def create_xlsx_export(snapshot):
-    """
-    Creates a XLSX export of the snapshot
-    """
-    logger.info(f"creating xlsx export for snapshot {snapshot}")
-
-    with  tempfile.TemporaryFile() as xlsx_file:
-        workbook = xlsxwriter.Workbook(xlsx_file)
-        worksheet = workbook.add_worksheet()
-
-        for index, field in enumerate(EXPORT_MONUMENTS_HEADER):
-            worksheet.write(0, index, field)
-
-        monuments = Monument.objects.filter(snapshot=snapshot, municipality__isnull=False).annotate(
-            pictures_count=models.Count("pictures"),
-            pictures_wlm_count=models.Count("pictures", filter=models.Q(pictures__image_type="wlm")),
-        ).iterator()
-        for index, monument in enumerate(monuments):
-            row = serialize_monument_for_export(monument)
-            for column, value in enumerate(row):
-                worksheet.write(index + 1, column, value)
-
-        workbook.close()
-        xlsx_file.seek(0)
-        file_wrapper = File(xlsx_file)
-        snapshot.xlsx_export.save("monuments.xlsx", file_wrapper)
-        snapshot.save()
-        logger.info(f"created xlsx export for snapshot {snapshot}")
-
+def serialize_monuments_for_export(monuments):
+    serializer = MonumentExportSerializer(monuments, many=True)
+    return serializer.data
 
 def create_export(snapshot):
     """
@@ -927,37 +870,46 @@ def create_export(snapshot):
     """
 
     logger.info(f"creating xlsx and csv exports for snapshot {snapshot}")
-    
-    with  tempfile.TemporaryFile() as xlsx_file:
+
+    with tempfile.TemporaryFile() as xlsx_file:
         with tempfile.TemporaryFile(mode="w+t") as csv_file:
             workbook = xlsxwriter.Workbook(xlsx_file)
             worksheet = workbook.add_worksheet()
             for index, field in enumerate(EXPORT_MONUMENTS_HEADER):
                 worksheet.write(0, index, field)
 
-            csv_writer = csv.writer(csv_file, delimiter=";")
-            csv_writer.writerow(EXPORT_MONUMENTS_HEADER)
+            csv_writer = csv.DictWriter(csv_file, EXPORT_MONUMENTS_HEADER, delimiter=";")
+            csv_writer.writeheader()
 
-            monuments = Monument.objects.filter(snapshot=snapshot, municipality__isnull=False).annotate(
-                pictures_count=models.Count("pictures"),
-                pictures_wlm_count=models.Count("pictures", filter=models.Q(pictures__image_type="wlm")),
-            ).select_related('municipality', 'province', 'region').iterator()
-            for index, monument in enumerate(monuments):
-                row = serialize_monument_for_export(monument)
-                for column, value in enumerate(row):
-                    worksheet.write(index + 1, column, value)
-                csv_writer.writerow(row)
+            monuments = (
+                Monument.objects.filter(snapshot=snapshot, municipality__isnull=False)
+                .annotate(
+                    pictures_count=models.Count("pictures"),
+                    pictures_wlm_count=models.Count("pictures", filter=models.Q(pictures__image_type="wlm")),
+                )
+                .select_related("municipality", "province", "region")
+            ).order_by("id")
 
-            #finalizing exports
+            page_size = 300
+            paginator = Paginator(monuments, page_size) # 
+            for page_num in paginator.page_range:
+                page = paginator.page(page_num)
+                records = page.object_list
+                rows = serialize_monuments_for_export(records)
+                csv_writer.writerows(rows)
+                for idx, row in enumerate(rows):
+                    worksheet.write_row((page_num - 1) * page_size + idx, 0, [row[field] for field in EXPORT_MONUMENTS_HEADER])
+
+            # finalizing exports
             workbook.close()
 
             xlsx_file.seek(0)
             file_wrapper_xlsx = File(xlsx_file)
             snapshot.xlsx_export.save("monuments.xlsx", file_wrapper_xlsx)
-    
+
             csv_file.seek(0)
             file_wrapper_csv = File(csv_file)
             snapshot.csv_export.save("monuments.csv", file_wrapper_csv)
-    
+
     snapshot.save()
     logger.info(f"created xlsx and csv exports for snapshot {snapshot}")

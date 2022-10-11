@@ -6,6 +6,7 @@ services:
     image: postgis/postgis:13-master
     volumes:
       - ./dockerdata/db:/var/lib/postgresql/data
+      - ./dumps:/dumps
     environment:
       #Environment variable for creating DB user and DB
       POSTGRES_USER: wlm
