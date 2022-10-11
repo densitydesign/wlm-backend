@@ -1,4 +1,5 @@
 from cmath import inf
+import tempfile
 import csv
 from typing import OrderedDict
 from django.core.cache import cache
@@ -14,7 +15,7 @@ from rest_framework.exceptions import APIException
 from django.test import Client, RequestFactory
 import functools
 from django.core.cache import caches
-
+from rest_framework import serializers
 from django.contrib.gis.utils import LayerMapping
 from django.db import transaction, models
 from django.forms import ValidationError
@@ -608,7 +609,7 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
 
     #creating csv and xlsx full exports
     create_export(snapshot)
-
+    
     # clearing view cache
     caches["views"].clear()
 
@@ -770,9 +771,6 @@ EXPORT_MONUMENTS_HEADER = [
 ]
 
 
-from rest_framework import serializers
-
-
 class MonumentExportSerializer(serializers.ModelSerializer):
 
     pictures = serializers.IntegerField(source="pictures_count")
@@ -834,23 +832,24 @@ def create_csv_export(snapshot):
     """
     logger.info(f"creating csv export for snapshot {snapshot}")
 
-    # creating the file
-    csv_file = io.StringIO()
-    csv_writer = csv.writer(csv_file, delimiter=";")
+    with  tempfile.TemporaryFile("w+t") as csv_file:
+        csv_writer = csv.writer(csv_file, delimiter=";")
 
-    csv_writer.writerow(EXPORT_MONUMENTS_HEADER)
-    monuments = Monument.objects.filter(snapshot=snapshot).annotate(
-        pictures_count=models.Count("pictures"),
-        pictures_wlm_count=models.Count("pictures", filter=models.Q(pictures__image_type="wlm")),
-    )
-    for monument in monuments:
-        row = serialize_monument_for_export(monument)
-        print(row)
-        csv_writer.writerow(row)
+        csv_writer.writerow(EXPORT_MONUMENTS_HEADER)
+        monuments = Monument.objects.filter(snapshot=snapshot, municipality__isnull=False).annotate(
+            pictures_count=models.Count("pictures"),
+            pictures_wlm_count=models.Count("pictures", filter=models.Q(pictures__image_type="wlm")),
+        ).iterator()
+        for monument in monuments:
+            row = serialize_monument_for_export(monument)
+            print(row)
+            csv_writer.writerow(row)
 
-    file_wrapper = File(csv_file)
-    snapshot.csv_export.save("monuments.csv", file_wrapper)
-    snapshot.save()
+        csv_file.seek(0)
+        file_wrapper = File(csv_file)
+        snapshot.csv_export.save("monuments.csv", file_wrapper)
+        snapshot.save()
+    
     logger.info(f"created csv export for snapshot {snapshot}")
 
 
@@ -860,30 +859,28 @@ def create_xlsx_export(snapshot):
     """
     logger.info(f"creating xlsx export for snapshot {snapshot}")
 
-    # creating the file
-    xlsx_file = io.BytesIO()
-    workbook = xlsxwriter.Workbook(xlsx_file)
-    worksheet = workbook.add_worksheet()
+    with  tempfile.TemporaryFile() as xlsx_file:
+        workbook = xlsxwriter.Workbook(xlsx_file)
+        worksheet = workbook.add_worksheet()
 
-    # writing the header
-    for index, field in enumerate(EXPORT_MONUMENTS_HEADER):
-        worksheet.write(0, index, field)
+        for index, field in enumerate(EXPORT_MONUMENTS_HEADER):
+            worksheet.write(0, index, field)
 
-    # writing the data
-    monuments = Monument.objects.filter(snapshot=snapshot).annotate(
-        pictures_count=models.Count("pictures"),
-        pictures_wlm_count=models.Count("pictures", filter=models.Q(pictures__image_type="wlm")),
-    )
-    for index, monument in enumerate(monuments):
-        row = serialize_monument_for_export(monument)
-        for column, value in enumerate(row):
-            worksheet.write(index + 1, column, value)
+        monuments = Monument.objects.filter(snapshot=snapshot, municipality__isnull=False).annotate(
+            pictures_count=models.Count("pictures"),
+            pictures_wlm_count=models.Count("pictures", filter=models.Q(pictures__image_type="wlm")),
+        ).iterator()
+        for index, monument in enumerate(monuments):
+            row = serialize_monument_for_export(monument)
+            for column, value in enumerate(row):
+                worksheet.write(index + 1, column, value)
 
-    workbook.close()
-    file_wrapper = File(xlsx_file)
-    snapshot.xlsx_export.save("monuments.xlsx", file_wrapper)
-    snapshot.save()
-    logger.info(f"created xlsx export for snapshot {snapshot}")
+        workbook.close()
+        xlsx_file.seek(0)
+        file_wrapper = File(xlsx_file)
+        snapshot.xlsx_export.save("monuments.xlsx", file_wrapper)
+        snapshot.save()
+        logger.info(f"created xlsx export for snapshot {snapshot}")
 
 
 def create_export(snapshot):
@@ -893,39 +890,36 @@ def create_export(snapshot):
 
     logger.info(f"creating xlsx and csv exports for snapshot {snapshot}")
     
-    # xlsx file and header
-    xlsx_file = io.BytesIO()
-    workbook = xlsxwriter.Workbook(xlsx_file)
-    worksheet = workbook.add_worksheet()
-    for index, field in enumerate(EXPORT_MONUMENTS_HEADER):
-        worksheet.write(0, index, field)
+    with  tempfile.TemporaryFile() as xlsx_file:
+        with tempfile.TemporaryFile(mode="w+t") as csv_file:
+            workbook = xlsxwriter.Workbook(xlsx_file)
+            worksheet = workbook.add_worksheet()
+            for index, field in enumerate(EXPORT_MONUMENTS_HEADER):
+                worksheet.write(0, index, field)
 
-    #csv file and header
-    csv_file = io.StringIO()
-    csv_writer = csv.writer(csv_file, delimiter=";")
-    csv_writer.writerow(EXPORT_MONUMENTS_HEADER)
+            csv_writer = csv.writer(csv_file, delimiter=";")
+            csv_writer.writerow(EXPORT_MONUMENTS_HEADER)
 
+            monuments = Monument.objects.filter(snapshot=snapshot, municipality__isnull=False).annotate(
+                pictures_count=models.Count("pictures"),
+                pictures_wlm_count=models.Count("pictures", filter=models.Q(pictures__image_type="wlm")),
+            ).select_related('municipality', 'province', 'region').iterator()
+            for index, monument in enumerate(monuments):
+                row = serialize_monument_for_export(monument)
+                for column, value in enumerate(row):
+                    worksheet.write(index + 1, column, value)
+                csv_writer.writerow(row)
 
-    # writing the data
-    monuments = Monument.objects.filter(snapshot=snapshot).annotate(
-        pictures_count=models.Count("pictures"),
-        pictures_wlm_count=models.Count("pictures", filter=models.Q(pictures__image_type="wlm")),
-    ).select_related('municipality', 'province', 'region')
-    for index, monument in enumerate(monuments):
-        row = serialize_monument_for_export(monument)
-        for column, value in enumerate(row):
-            worksheet.write(index + 1, column, value)
-        csv_writer.writerow(row)
+            #finalizing exports
+            workbook.close()
 
-
-    #finalizing exports
-    workbook.close()
-
-    file_wrapper_xlsx = File(xlsx_file)
-    snapshot.xlsx_export.save("monuments.xlsx", file_wrapper_xlsx)
+            xlsx_file.seek(0)
+            file_wrapper_xlsx = File(xlsx_file)
+            snapshot.xlsx_export.save("monuments.xlsx", file_wrapper_xlsx)
     
-    file_wrapper_csv = File(csv_file)
-    snapshot.csv_export.save("monuments.csv", file_wrapper_csv)
+            csv_file.seek(0)
+            file_wrapper_csv = File(csv_file)
+            snapshot.csv_export.save("monuments.csv", file_wrapper_csv)
     
     snapshot.save()
     logger.info(f"created xlsx and csv exports for snapshot {snapshot}")
