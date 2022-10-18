@@ -167,7 +167,7 @@ def compute_dates(date_from, date_to, step_size, step_unit):
             if len(dates) > 50:
                 raise APIException("Too many dates (max 50)")
         if len(dates):
-            prev_date = start - timedelta(days=1)
+            prev_date = date_from - timedelta(days=1)
             dates.insert(0, prev_date)
 
     elif step_unit == "months":
@@ -898,7 +898,7 @@ def create_export(snapshot):
                 .select_related("municipality", "province", "region")
             ).order_by("id")
 
-            page_size = 300
+            page_size = 150
             paginator = Paginator(monuments, page_size) # 
             for page_num in paginator.page_range:
                 page = paginator.page(page_num)
