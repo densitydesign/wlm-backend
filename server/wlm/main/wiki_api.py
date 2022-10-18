@@ -53,6 +53,7 @@ def execute_query(query):
 
 
 def format_monument(monument):
+    out = {}
     for key in monument:
         value = monument[key]["value"]
         # clean q_numbers
@@ -64,8 +65,8 @@ def format_monument(monument):
                 value = []
             else:
                 value = value.split(";")
-        monument[key] = value
-    return monument
+        out[key] = value
+    return out
 
 
 def search_commons_url(url):    

@@ -531,16 +531,22 @@ def update_category(
             logger.exception(e)
 
 
-def process_category_snapshot(
-    cat_snapshot, skip_pictures=False, skip_geo=False, category_only=False, reset_pictures=False
-):
-    logger.info(f"process_category_snapshot {cat_snapshot.category.label}")
+def get_category_snapshot_payload(cat_snapshot):
+    logger.info(f"get_category_snapshot_payload {cat_snapshot.category.label}")
     if not cat_snapshot.payload:
         logger.info(f"running sparql for {cat_snapshot.category.label}")
         results = execute_query(cat_snapshot.query)
         data = results["results"]["bindings"]
         cat_snapshot.payload = data
         cat_snapshot.save()
+
+
+def process_category_snapshot(
+    cat_snapshot, skip_pictures=False, skip_geo=False, category_only=False, reset_pictures=False
+):
+    logger.info(f"process_category_snapshot {cat_snapshot.category.label}")
+    if not cat_snapshot.payload:
+        get_category_snapshot_payload(cat_snapshot)
     monuments = [format_monument(x) for x in cat_snapshot.payload]
     update_category(
         monuments,
@@ -636,7 +642,20 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
         logger.info(cat_snapshot)
         categories_snapshots.append(cat_snapshot)
 
+    all_q_numbers = []
     for cat_snapshot in categories_snapshots:
+        get_category_snapshot_payload(cat_snapshot)
+        monuments_data = [format_monument(x) for x in cat_snapshot.payload]
+        qs = [x.get('mon', None) for x in monuments_data]
+        all_q_numbers += list(set(qs))
+
+    #deleting monuments that are not referenced by sparql. 
+    #could be a large query but postgres should handle it gracefully
+    monuments_to_delete = Monument.objects.exclude(q_number__in=all_q_numbers)
+    logger.info(f"deleting monuments missing in snapshot")
+    monuments_to_delete.delete()
+    
+    for cat_snapshot in categories_snapshots:        
         if cat_snapshot.complete:
             continue
         process_category_snapshot(
@@ -656,6 +675,9 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
     snapshot.complete = True
     snapshot.save()
     snapshot.category_snapshots.all().delete()
+
+    #dropping old monuments .. should have be dropped in advance by the previous procedure
+    Monument.objects.exclude(snapshot__pk=snapshot.pk).delete()
 
     # creating csv and xlsx full exports
     create_export(snapshot)
