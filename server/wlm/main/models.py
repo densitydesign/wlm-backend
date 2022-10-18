@@ -66,6 +66,20 @@ class Province(models.Model):
         ordering = ['name']
 
 
+class MunicipalityLookup(models.Model):
+    name = models.CharField(max_length=200)
+    code = models.IntegerField(primary_key=True)
+    province_code = models.IntegerField()
+    region_code = models.IntegerField()
+    poly = models.MultiPolygonField(blank=True, null=True)
+    
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['name']
+
+
 class Municipality(models.Model):
     name = models.CharField(max_length=200)
     code = models.IntegerField(primary_key=True)

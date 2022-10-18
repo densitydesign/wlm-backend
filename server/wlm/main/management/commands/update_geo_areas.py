@@ -11,7 +11,7 @@ class Command(BaseCommand):
         parser.add_argument('--dry-run', action='store_true', required=False)
 
     
-    @transaction.atomic
+    #@transaction.atomic
     def handle(self, *args, **options):
         update_geo_areas()
 

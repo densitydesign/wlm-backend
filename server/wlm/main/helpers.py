@@ -34,7 +34,7 @@ from main.wiki_api import (
     get_wlm_query,
     execute_query,
 )
-from main.models import Monument, Picture, Region, Province, Municipality, Category, CategorySnapshot, Snapshot
+from main.models import Monument, Picture, Region, Province, Municipality, MunicipalityLookup,  Category, CategorySnapshot, Snapshot
 from main.serializers import ProvinceGeoSerializer, MunicipalityGeoSerializer, RegionGeoSerializer
 from django.contrib.gis.db.models.functions import Centroid
 from django.core.files import File
@@ -382,6 +382,20 @@ def update_image(monument, image_data, image_type):
 def parse_point(point_str):
     return point_str.upper().replace("POINT(", "").replace(")", "").split(" ")
 
+def get_administrative_areas(position):
+    try:
+        municipality_look = MunicipalityLookup.objects.get(
+            poly__contains=position,
+        )
+        municipality = Municipality.objects.get(
+            code=municipality_look.code,
+        )
+        province = municipality.province
+        region = province.region
+        return {"municipality":municipality, "province":province, "region":region}
+    except MunicipalityLookup.DoesNotExist:
+        return None
+
 
 @transaction.atomic
 def update_monument(
@@ -445,16 +459,9 @@ def update_monument(
     }
 
     if not skip_geo and position is not None:
-        try:
-            municipality = Municipality.objects.get(
-                poly__contains=position,
-            )
-            municipality = municipality
-            province = municipality.province
-            region = province.region
-            defaults.update({"municipality":municipality, "province":province, "region":region})
-        except Municipality.DoesNotExist:
-            pass
+        administrative_areas = get_administrative_areas(position)
+        if administrative_areas is not None:
+            defaults.update(administrative_areas)
 
     monument, created = Monument.objects.update_or_create(
         q_number=code,
@@ -574,19 +581,20 @@ def update_geo_from_parents():
 
 
 def update_geo_areas():
-    """tries to update missing municipalies, provinces and regions on all the dataset"""
-    for monument in Monument.objects.filter(municipality=None, position__isnull=False):
-        try:
-            municipality = Municipality.objects.get(
-                poly__contains=monument.position,
-            )
-            monument.municipality = municipality
-            monument.province = municipality.province
-            monument.region = municipality.province.region
+    """tries to update missing municipalities, provinces and regions on all the dataset"""
+    qs = Monument.objects.filter(municipality=None, position__isnull=False)
+    print(qs.count())
+    for monument in qs:
+        administrative_areas = get_administrative_areas(monument.position)
+        if administrative_areas:
+            monument.municipality = administrative_areas["municipality"]
+            monument.province = administrative_areas["province"]
+            monument.region = administrative_areas["region"]
             monument.save()
-
-        except Municipality.DoesNotExist:
-            pass
+            print(f"updated {monument.q_number} administrative areas")
+        else:
+            print(f"no administrative areas for {monument.q_number}")
+        
 
 
 def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, category_only=False, reset_pictures=True):
@@ -668,19 +676,39 @@ def download_extract_zip(url):
                 yield zipinfo.filename, thefile
 
 
-def update_regions(shape_path):
+
+class ExtraKwargsLayerMapping(LayerMapping):
+    """
+    This is an extension to django LayerMapping allowing custom kwargs to be passed to the model constructor
+    (as constants as they don't change for each feature). Not really used, but could be useful in the future.
+    """
+    def __init__(self, *args, **kwargs):
+        self.extra_kwargs = kwargs.pop("extra_kwargs", {})
+        super().__init__(*args, **kwargs)
+
+    def feature_kwargs(self, feature):
+        kwargs = super().feature_kwargs(feature)
+        if self.extra_kwargs:
+            kwargs.update(self.extra_kwargs)
+        return kwargs
+
+
+def update_regions(shape_path, extra_kwargs=None):
     logger.info(f"updating regions from shapefile {shape_path}")
     mapping = {
         "name": "DEN_REG",
         "code": "COD_REG",
         "poly": "POLYGON",
     }
-    lm = LayerMapping(Region, shape_path, mapping)
-    Region.objects.all().delete()
+    lm = ExtraKwargsLayerMapping(Region, shape_path, mapping, extra_kwargs=extra_kwargs)
+    qs = Region.objects.all()
+    if extra_kwargs:
+        qs = qs.filter(**extra_kwargs)
+    qs.delete()
     lm.save()
 
 
-def update_provinces(shape_path):
+def update_provinces(shape_path, extra_kwargs=None):
     logger.info(f"updating provinces from shapefile {shape_path}")
     mapping = {
         "name": "DEN_UTS",
@@ -688,12 +716,15 @@ def update_provinces(shape_path):
         "region_code": "COD_REG",
         "poly": "POLYGON",
     }
-    lm = LayerMapping(Province, shape_path, mapping)
-    Province.objects.all().delete()
+    lm = ExtraKwargsLayerMapping(Province, shape_path, mapping, extra_kwargs=extra_kwargs)
+    qs = Province.objects.all()
+    if extra_kwargs:
+        qs = qs.filter(**extra_kwargs)
+    qs.delete()
     lm.save()
 
 
-def update_municipalities(shape_path):
+def update_municipalities(shape_path, extra_kwargs=None):
     logger.info(f"updating municipalities from shapefile {shape_path}")
     mapping = {
         "name": "COMUNE",
@@ -702,13 +733,33 @@ def update_municipalities(shape_path):
         "region_code": "COD_REG",
         "poly": "POLYGON",
     }
-    lm = LayerMapping(Municipality, shape_path, mapping)
-    Municipality.objects.all().delete()
+    lm = ExtraKwargsLayerMapping(Municipality, shape_path, mapping, extra_kwargs=extra_kwargs)
+    qs = Municipality.objects.all()
+    if extra_kwargs:
+        qs = qs.filter(**extra_kwargs)
+    qs.delete()
+    lm.save()
+
+
+def update_municipalities_lookup(shape_path, extra_kwargs=None):
+    logger.info(f"updating municipalities (lookup version) from shapefile {shape_path}")
+    mapping = {
+        "name": "COMUNE",
+        "code": "PRO_COM",
+        "province_code": "COD_PROV",
+        "region_code": "COD_REG",
+        "poly": "POLYGON",
+    }
+    lm = ExtraKwargsLayerMapping(MunicipalityLookup, shape_path, mapping, extra_kwargs=extra_kwargs)
+    qs = MunicipalityLookup.objects.all()
+    if extra_kwargs:
+        qs = qs.filter(**extra_kwargs)
+    qs.delete()
     lm.save()
 
 
 @transaction.atomic
-def update_geo(regions_path, provices_path, municipalities_path):
+def update_geo(regions_path, provinces_path, municipalities_path, municipalities_lookup_path, extra_kwargs=None):
     """
     Updates the geographic entities
     No historical tracking of changes
@@ -716,11 +767,14 @@ def update_geo(regions_path, provices_path, municipalities_path):
     # PROBABLY: we should drop and recompute stats for each snapshot. or use on the-fly aggregation + (pre-)caching.
     Potientially this could "move" a Monument from one municipality (or indirectly province or region) to another.
     """
-    update_regions(regions_path)
-    update_provinces(provices_path)
-    update_municipalities(municipalities_path)
+    update_regions(regions_path, extra_kwargs=extra_kwargs)
+    update_provinces(provinces_path, extra_kwargs=extra_kwargs)
+    update_municipalities(municipalities_path, extra_kwargs=extra_kwargs)
+    update_municipalities_lookup(municipalities_lookup_path, extra_kwargs=extra_kwargs)
 
     provinces = Province.objects.all()
+    if extra_kwargs:
+        provinces = provinces.filter(**extra_kwargs)
     provinces_by_code = {}
     regions_by_code = {}
     for province in provinces:
@@ -732,6 +786,8 @@ def update_geo(regions_path, provices_path, municipalities_path):
 
     updated_municipalities = []
     municipalities = Municipality.objects.all()
+    if extra_kwargs:
+        municipalities = municipalities.filter(**extra_kwargs)
     for municipality in municipalities:
         logger.info(f"update municipality {municipality.name}")
         municipality.province = provinces_by_code[municipality.province_code]
