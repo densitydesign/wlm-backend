@@ -333,6 +333,10 @@ class MonumentFilter(filters.FilterSet):
             ('municipality_label', 'municipality__name'),
             ('province_label', 'province__name'),
             ('region_label', 'region__name'),
+            ('pictures_count', 'pictures_count'),
+            ('pictures_wlm_count', 'pictures_wlm_count'),
+            ('pictures_commons_count', 'pictures_commons_count'),
+            ('pictures_count', 'pictures_count'),
         ),
     )
 
@@ -340,14 +344,14 @@ class MonumentFilter(filters.FilterSet):
     
     class Meta:
         model = Monument
-        fields = ['region', 'province', 'municipality', 'theme']
+        fields = ['region', 'province', 'municipality', 'theme', 'current_wlm_state', 'current_commons_state', 'to_review']
         
 
 @method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
 @method_decorator(cache_control(max_age=0, public=True), name="dispatch")
 @method_decorator(cache_page(None, cache="views"), name="dispatch")
 class MonumentViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Monument.objects.all().select_related('region', 'province', 'municipality')
+    queryset = Monument.objects.all().select_related('region', 'province', 'municipality').order_by('pk')
     serializer_class = MonumentSerializer
     pagination_class = StandardResultsSetPagination
     filterset_class = MonumentFilter

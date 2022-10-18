@@ -476,6 +476,8 @@ def update_monument(
         monument.first_image_date = None
         monument.first_image_date_commons = None
 
+    wlm_pics_collected = 0
+    commons_pics_collected = 0
     if not skip_pictures:
         logger.info(f"Updating pictures for {code}")
         # relevant image
@@ -483,11 +485,13 @@ def update_monument(
             relevant_images_data = search_commons_url(relevant_image_url)
             for image in relevant_images_data:
                 update_image(monument, image, "commons")
+                commons_pics_collected += 1
 
         if wlm_n:
             images = search_commons_wlm(wlm_n)
             for image in images:
                 update_image(monument, image, "wlm")
+                wlm_pics_collected += 1
 
         aggregates = monument.pictures.filter(image_type="wlm").aggregate(first_image_date=models.Min("image_date"))
         monument.first_image_date = aggregates["first_image_date"]
@@ -508,6 +512,13 @@ def update_monument(
         monument.current_commons_state = "withPicture"
     else:
         monument.current_commons_state = "onWikidataOnly"
+
+    if not skip_pictures:
+        monument.pictures_wlm_count = wlm_pics_collected
+        monument.pictures_commons_count = commons_pics_collected
+        monument.pictures_count = wlm_pics_collected + commons_pics_collected
+        if wlm_pics_collected > 0 and commons_pics_collected == 0:
+            monument.to_review = True
 
     monument.save()
 
@@ -908,12 +919,12 @@ class MonumentExportSerializer(serializers.ModelSerializer):
     wikidata_creation_date = serializers.DateTimeField(source="first_revision")
     first_commons_image_date = serializers.DateField(source="first_image_date_commons")
     first_wlm_image_date = serializers.DateField(source="first_image_date")
-    municipality_code = serializers.CharField(source="municipality.code")
-    province_code = serializers.CharField(source="province.code")
-    region_code = serializers.CharField(source="region.code")
-    municipality_label = serializers.CharField(source="municipality.name")
-    province_label = serializers.CharField(source="province.name")
-    region_label = serializers.CharField(source="region.name")
+    municipality_code = serializers.CharField(source="municipality.code", required=False)
+    province_code = serializers.CharField(source="province.code", required=False)
+    region_code = serializers.CharField(source="region.code", required=False)
+    municipality_label = serializers.CharField(source="municipality.name", required=False)
+    province_label = serializers.CharField(source="province.name", required=False)
+    region_label = serializers.CharField(source="region.name", required=False)
 
     class Meta:
         model = Monument
@@ -968,23 +979,22 @@ def create_export(snapshot):
             csv_writer.writeheader()
 
             monuments = (
-                Monument.objects.filter(snapshot=snapshot, municipality__isnull=False)
-                .annotate(
-                    pictures_count=models.Count("pictures"),
-                    pictures_wlm_count=models.Count("pictures", filter=models.Q(pictures__image_type="wlm")),
-                )
-                .select_related("municipality", "province", "region")
+                Monument.objects.filter(
+                    snapshot=snapshot, 
+                    #municipality__isnull=False
+                ).select_related("municipality", "province", "region")
             ).order_by("id")
 
-            page_size = 150
+            page_size = 100
             paginator = Paginator(monuments, page_size) # 
             for page_num in paginator.page_range:
+                logger.info(f"exporting page {page_num} of {paginator.num_pages}")
                 page = paginator.page(page_num)
                 records = page.object_list
                 rows = serialize_monuments_for_export(records)
                 csv_writer.writerows(rows)
-                for idx, row in enumerate(rows):
-                    worksheet.write_row((page_num - 1) * page_size + idx, 0, [row[field] for field in EXPORT_MONUMENTS_HEADER])
+                # for idx, row in enumerate(rows):
+                #     worksheet.write_row((page_num - 1) * page_size + idx, 0, [row.get(field, '') for field in EXPORT_MONUMENTS_HEADER])
 
             # finalizing exports
             workbook.close()

@@ -120,11 +120,16 @@ class Monument(models.Model):
 
     snapshot = models.ForeignKey(Snapshot, models.SET_NULL, null=True, blank=True, related_name='monuments')
 
-    first_image_date = models.DateField(blank=True, null=True)
-    first_image_date_commons = models.DateField(blank=True, null=True)
+    first_image_date = models.DateField(blank=True, null=True, db_index=True)
+    first_image_date_commons = models.DateField(blank=True, null=True, db_index=True)
 
     current_wlm_state = models.CharField(blank=True, default='', max_length=20)
     current_commons_state = models.CharField(blank=True, default='', max_length=20)
+
+    pictures_count = models.IntegerField(blank=True, null=True)
+    pictures_wlm_count = models.IntegerField(blank=True, null=True)
+    pictures_commons_count = models.IntegerField(blank=True, null=True)
+    to_review = models.BooleanField(default=False)
     
     class Meta:
         index_together = [
@@ -142,7 +147,7 @@ class Picture(models.Model):
     image_url = models.URLField(max_length=2000)
     image_date = models.DateTimeField(blank=True, null=True, db_index=True)
     image_title = models.TextField(blank=True, default="")
-    image_type = models.CharField(max_length=20)
+    image_type = models.CharField(max_length=20, db_index=True)
     data = models.JSONField(default=dict)
 
     class Meta:

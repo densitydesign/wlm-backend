@@ -1,4 +1,5 @@
 from asyncore import read
+from importlib.metadata import requires
 from rest_framework import serializers
 from main.models import Region, Province, Municipality, Monument, Picture, Category
 from rest_framework_gis.serializers import GeometryField, GeoFeatureModelSerializer
@@ -125,6 +126,10 @@ class MonumentSerializer(serializers.ModelSerializer):
             "region_label",
             "current_wlm_state",
             "current_commons_state",
+            "pictures_count",
+            "pictures_wlm_count",
+            "pictures_commons_count",
+            "to_review"
         ]
 
 
