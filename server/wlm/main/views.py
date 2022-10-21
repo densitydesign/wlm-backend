@@ -3,6 +3,7 @@ from django.http import HttpResponseRedirect
 from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.decorators import action
+from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 from main.models import (Region, Province, Municipality, Monument, Picture, Category, Snapshot)
 from main.serializers import (RegionSerializer, RegionGeoSerializer,
@@ -283,7 +284,7 @@ class MunicipalityViewSet(viewsets.ReadOnlyModelViewSet):
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 100
     page_size_query_param = 'page_size'
-    max_page_size = 1000
+    max_page_size = 10000
 
 
 class Y(filters.ModelChoiceFilter):
@@ -355,6 +356,18 @@ class MonumentViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = MonumentSerializer
     pagination_class = StandardResultsSetPagination
     filterset_class = MonumentFilter
+
+
+    def list(self, request):
+        page_size = request.query_params.get('page_size', None)
+        if page_size:
+            try:
+                page_size = int(page_size)
+            except ValueError:
+                raise APIException(detail="Page size must be an integer")
+            if page_size > StandardResultsSetPagination.max_page_size:
+                raise APIException(detail="Page size is too high")
+        return super().list(request)
 
     @action(methods=["get"], detail=False, url_path="by-q/(?P<q>[^/.]+)")
     def byq(self, request, q=None):
