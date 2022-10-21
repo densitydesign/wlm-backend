@@ -958,6 +958,7 @@ def serialize_monument_for_export(monument):
 
 
 def serialize_monuments_for_export(monuments):
+    return [{"id":x.id} for x in monuments]
     serializer = MonumentExportSerializer(monuments, many=True)
     return serializer.data
 
@@ -978,23 +979,26 @@ def create_export(snapshot):
             csv_writer = csv.DictWriter(csv_file, EXPORT_MONUMENTS_HEADER, delimiter=";")
             csv_writer.writeheader()
 
-            monuments = (
-                Monument.objects.filter(
+            monuments = Monument.objects.filter(
                     snapshot=snapshot, 
                     #municipality__isnull=False
-                ).select_related("municipality", "province", "region")
-            ).order_by("id")
-
+                ).select_related("region", "province", "municipality").order_by("id")
+            
             page_size = 100
-            paginator = Paginator(monuments, page_size) # 
-            for page_num in paginator.page_range:
-                logger.info(f"exporting page {page_num} of {paginator.num_pages}")
-                page = paginator.page(page_num)
-                records = page.object_list
-                rows = serialize_monuments_for_export(records)
-                csv_writer.writerows(rows)
-                # for idx, row in enumerate(rows):
-                #     worksheet.write_row((page_num - 1) * page_size + idx, 0, [row.get(field, '') for field in EXPORT_MONUMENTS_HEADER])
+            for idx, monument in enumerate(monuments.iterator(page_size)):
+                #print(records)
+                #logger.info(f"exporting page {page_num} of {paginator.num_pages}")
+                # logger.info(f"{page}")
+                #page = paginator.page(page_num)
+                # records = page.object_list
+                #x = list(records)
+                #rows = serialize_monuments_for_export(records)
+                #csv_writer.writerows(rows)
+                
+                row = serialize_monument_for_export(monument)
+                csv_writer.writerow(row)
+                worksheet.write_row(idx, 0, [row.get(field, '') for field in EXPORT_MONUMENTS_HEADER])
+
 
             # finalizing exports
             workbook.close()

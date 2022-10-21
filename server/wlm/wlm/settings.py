@@ -147,6 +147,7 @@ LOGGING = {
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
+            'level': 'DEBUG',
         },
     },
     'root': {
@@ -157,13 +158,33 @@ LOGGING = {
         'handlers': ['console'],
         'level': 'INFO',
     },
+    'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
 }
+
+# LOGGING = {
+#     'version': 1,
+#     'disable_existing_loggers': False,
+#     'handlers': {
+#         'console': {
+#             'level': 'DEBUG',
+#             'class': 'logging.StreamHandler',
+#         }
+#     },
+#     'loggers': {
+#         'django.db.backends': {
+#             'handlers': ['console'],
+#             'level': 'DEBUG',
+#         },
+#     }
+# }
 
 REST_FRAMEWORK = {
     # YOUR SETTINGS
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
-
 }
 
 SPECTACULAR_SETTINGS = {
