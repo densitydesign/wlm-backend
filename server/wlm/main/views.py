@@ -333,10 +333,10 @@ class MonumentFilter(filters.FilterSet):
             ('municipality_label', 'municipality__name'),
             ('province_label', 'province__name'),
             ('region_label', 'region__name'),
-            ('pictures_count', 'pictures_count'),
             ('pictures_wlm_count', 'pictures_wlm_count'),
             ('pictures_commons_count', 'pictures_commons_count'),
             ('pictures_count', 'pictures_count'),
+            ('first_revision', 'first_revision'),
         ),
     )
 
