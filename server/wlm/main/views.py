@@ -1,5 +1,5 @@
 from django.core.cache import cache
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, StreamingHttpResponse
 from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.decorators import action
@@ -21,7 +21,8 @@ from django.views.decorators.http import condition
 from django.views.decorators.cache import cache_control, cache_page
 from django.conf import settings
 from rest_framework.exceptions import NotFound
-
+import csv
+from main.helpers import EXPORT_MONUMENTS_HEADER, MonumentExportSerializer
 
 
 def get_last_import(request, **kwargs):
@@ -346,7 +347,31 @@ class MonumentFilter(filters.FilterSet):
     class Meta:
         model = Monument
         fields = ['region', 'province', 'municipality', 'theme', 'current_wlm_state', 'current_commons_state', 'to_review']
-        
+
+
+class CSVBuffer:
+    """An object that implements just the write method of the file-like
+    interface.
+    """
+    def write(self, value):
+        """Return the string to write."""
+        return value
+
+class CSVStream:
+    """Class to stream (download) an iterator to a 
+    CSV file."""
+    def export(self, filename, iterator):
+        # 1. Create our writer object with the pseudo buffer
+        writer = csv.DictWriter(CSVBuffer(), EXPORT_MONUMENTS_HEADER, delimiter=";")
+
+        # 2. Create the StreamingHttpResponse using our iterator as streaming content
+        response = StreamingHttpResponse((writer.writerow(MonumentExportSerializer(row).data) for row in iterator),
+                                         content_type="text/csv")
+
+        # 3. Add additional headers to the response
+        response['Content-Disposition'] = f"attachment; filename={filename}.csv"
+        # 4. Return the response
+        return response
 
 @method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
 @method_decorator(cache_control(max_age=0, public=True), name="dispatch")
@@ -390,6 +415,14 @@ class MonumentViewSet(viewsets.ReadOnlyModelViewSet):
 
         url = request.build_absolute_uri(last_snapshot.csv_export.url)
         return HttpResponseRedirect(url)
+
+    @action(methods=["get"], detail=False)
+    def csvlive(self, request):
+        qs= self.get_queryset()
+        qs = self.filter_queryset(qs)
+        qs = qs.iterator(100)
+        csv_stream = CSVStream()
+        return csv_stream.export("monuments", qs)
 
     @action(methods=["get"], detail=False)
     def xlsx(self, request):
