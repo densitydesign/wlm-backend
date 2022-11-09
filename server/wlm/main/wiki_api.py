@@ -122,7 +122,7 @@ def search_commons_wlm(wlm_id):
         "prop": "imageinfo",
         "generator": "search",
         "iiprop": "extmetadata",
-        "gsrsearch": '"' + wlm_id + '"',
+        "gsrsearch": '"' + wlm_id + '" "Wiki Loves Monuments Italia"',
         "gsrnamespace": "6",
         "gsrlimit": "500",
         "grsoffset": "0",
