@@ -15,6 +15,7 @@ from main.helpers import get_snap, format_history
 from drf_spectacular.utils import extend_schema
 from rest_framework.pagination import PageNumberPagination
 from django_filters import rest_framework as filters
+from django_filters import widgets as filters_widgets
 from django.db import models
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import condition
@@ -295,6 +296,9 @@ class Y(filters.ModelChoiceFilter):
             return qs.filter(**{self.field_name: value})
         return qs
 
+class CharInFilter(filters.BaseInFilter, filters.CharFilter):
+    pass
+
 class MonumentFilter(filters.FilterSet):
     #photographed = filters.BooleanFilter(method='filter_photographed')
     #on_wiki = filters.BooleanFilter(method='filter_on_wiki')
@@ -303,6 +307,8 @@ class MonumentFilter(filters.FilterSet):
     region = filters.CharFilter(method='filter_region')
     province = filters.CharFilter(method='filter_province')
     municipality = filters.CharFilter(method='filter_municipality')
+    current_commons_state = CharInFilter(field_name='current_commons_state', lookup_expr='in', widget=filters_widgets.CSVWidget)
+    current_wlm_state = CharInFilter(field_name='current_wlm_state', lookup_expr='in', widget=filters_widgets.CSVWidget)
 
     def filter_region(self, qs, name, value):
         if(value=='0'):
@@ -343,7 +349,6 @@ class MonumentFilter(filters.FilterSet):
     )
 
   
-    
     class Meta:
         model = Monument
         fields = ['region', 'province', 'municipality', 'theme', 'current_wlm_state', 'current_commons_state', 'to_review']
