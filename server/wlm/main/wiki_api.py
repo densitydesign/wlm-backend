@@ -78,33 +78,41 @@ def search_commons_url(url):
         "prop": "imageinfo",
         "generator": "search",
         "iiprop": "extmetadata",
-        "gsrsearch": f"prefix:file:{filename}"
+        "gsrsearch": f"prefix:file:{filename}",
+        "gsroffset": "0",
         
     }
-    params = "&".join("%s=%s" % (k,v) for k,v in payload.items())
-    r = requests.get(COMMONS_URL, params)
-    data = r.json()
-    
-    if "query" in data and "pages" in data["query"] and len(data["query"]["pages"]) > 0:
-        images_data_clean = []
-        for pageid in data["query"]["pages"]:
-            image = data["query"]["pages"][str(pageid)]
-            temp_obj = {}
-            if "pageid" in image:
-                temp_obj["pageid"] = image["pageid"]
-            if "title" in image:
-                temp_obj["title"] = image["title"]
-            if "imageinfo" in image and len(image["imageinfo"]) > 0 and "extmetadata" in image["imageinfo"][0]:
-                extmetadata = image["imageinfo"][0]["extmetadata"]
-                if "DateTimeOriginal" in extmetadata and "value" in extmetadata["DateTimeOriginal"]:
-                    temp_obj["DateTimeOriginal"] = extmetadata["DateTimeOriginal"]["value"]
-                if "DateTime" in extmetadata and "value" in extmetadata["DateTime"]:
-                    temp_obj["DateTime"] = extmetadata["DateTime"]["value"]
 
-            images_data_clean.append(temp_obj)
-        return images_data_clean
-    else:
-        return []
+    next_page = True
+    out = []
+
+    while next_page:
+        params = "&".join("%s=%s" % (k,v) for k,v in payload.items())
+        r = requests.get(COMMONS_URL, params)
+        data = r.json()
+        
+        if "query" in data and "pages" in data["query"] and len(data["query"]["pages"]) > 0:
+            for pageid in data["query"]["pages"]:
+                image = data["query"]["pages"][str(pageid)]
+                temp_obj = {}
+                if "pageid" in image:
+                    temp_obj["pageid"] = image["pageid"]
+                if "title" in image:
+                    temp_obj["title"] = image["title"]
+                if "imageinfo" in image and len(image["imageinfo"]) > 0 and "extmetadata" in image["imageinfo"][0]:
+                    extmetadata = image["imageinfo"][0]["extmetadata"]
+                    if "DateTimeOriginal" in extmetadata and "value" in extmetadata["DateTimeOriginal"]:
+                        temp_obj["DateTimeOriginal"] = extmetadata["DateTimeOriginal"]["value"]
+                    if "DateTime" in extmetadata and "value" in extmetadata["DateTime"]:
+                        temp_obj["DateTime"] = extmetadata["DateTime"]["value"]
+
+                out.append(temp_obj)
+        
+        if "continue" in data and "gsroffset" in data["continue"]:
+            params["gsroffset"] = data["continue"]["gsroffset"]
+        else:
+            next_page = False
+    return out 
 
 
 def search_commons_wlm(wlm_id):
@@ -117,73 +125,36 @@ def search_commons_wlm(wlm_id):
         "gsrsearch": '"' + wlm_id + '"',
         "gsrnamespace": "6",
         "gsrlimit": "500",
+        "grsoffset": "0",
     }
-    r = requests.get(COMMONS_URL, params)
-    data = r.json()
-    if "query" in data and "pages" in data["query"] and len(data["query"]["pages"]) > 0:
-        images_data_clean = []
-        for pageid in data["query"]["pages"]:
-            image = data["query"]["pages"][str(pageid)]
-            temp_obj = {}
-            if "pageid" in image:
-                temp_obj["pageid"] = image["pageid"]
-            if "title" in image:
-                temp_obj["title"] = image["title"]
-            if "imageinfo" in image and len(image["imageinfo"]) > 0 and "extmetadata" in image["imageinfo"][0]:
-                extmetadata = image["imageinfo"][0]["extmetadata"]
-                if "DateTimeOriginal" in extmetadata and "value" in extmetadata["DateTimeOriginal"]:
-                    temp_obj["DateTimeOriginal"] = extmetadata["DateTimeOriginal"]["value"]
-                if "DateTime" in extmetadata and "value" in extmetadata["DateTime"]:
-                    temp_obj["DateTime"] = extmetadata["DateTime"]["value"]
+    
+    next_page = True
+    out = []
+    while(next_page):
+        r = requests.get(COMMONS_URL, params)
+        data = r.json()
+        if "query" in data and "pages" in data["query"] and len(data["query"]["pages"]) > 0:
+            for pageid in data["query"]["pages"]:
+                image = data["query"]["pages"][str(pageid)]
+                temp_obj = {}
+                if "pageid" in image:
+                    temp_obj["pageid"] = image["pageid"]
+                if "title" in image:
+                    temp_obj["title"] = image["title"]
+                if "imageinfo" in image and len(image["imageinfo"]) > 0 and "extmetadata" in image["imageinfo"][0]:
+                    extmetadata = image["imageinfo"][0]["extmetadata"]
+                    if "DateTimeOriginal" in extmetadata and "value" in extmetadata["DateTimeOriginal"]:
+                        temp_obj["DateTimeOriginal"] = extmetadata["DateTimeOriginal"]["value"]
+                    if "DateTime" in extmetadata and "value" in extmetadata["DateTime"]:
+                        temp_obj["DateTime"] = extmetadata["DateTime"]["value"]
 
-            images_data_clean.append(temp_obj)
-        return images_data_clean
-    else:
-        return []
-
-
-
-def search_commons(id, is_commons=False):
-    params = {
-        "action": "query",
-        "format": "json",
-        "prop": "imageinfo",
-        "generator": "search",
-        "iiprop": "extmetadata",    
-        "gsrnamespace": "6",
-    }
-
-    if not is_commons:
-        params["gsrsearch"] = '"' + id + '" "Wiki Loves Monuments Italia"',
-    else:
-        params["titles"] = '"' + id + '" "Wiki Loves Monuments Italia"',
+                out.append(temp_obj)
         
-
-    r = requests.get(COMMONS_URL, params)
-    data = r.json()
-    if "query" in data and "pages" in data["query"] and len(data["query"]["pages"]) > 0:
-        images_data_clean = []
-        for pageid in data["query"]["pages"]:
-            image = data["query"]["pages"][str(pageid)]
-            temp_obj = {}
-            if "pageid" in image:
-                temp_obj["pageid"] = image["pageid"]
-            if "title" in image:
-                temp_obj["title"] = image["title"]
-            if "imageinfo" in image and len(image["imageinfo"]) > 0 and "extmetadata" in image["imageinfo"][0]:
-                extmetadata = image["imageinfo"][0]["extmetadata"]
-                if "DateTimeOriginal" in extmetadata and "value" in extmetadata["DateTimeOriginal"]:
-                    temp_obj["DateTimeOriginal"] = extmetadata["DateTimeOriginal"]["value"]
-                if "DateTime" in extmetadata and "value" in extmetadata["DateTime"]:
-                    temp_obj["DateTime"] = extmetadata["DateTime"]["value"]
-
-            images_data_clean.append(temp_obj)
-        #print("\tFound", len(images_data_clean), "photos")
-        
-        return images_data_clean
-    else:
-        #print("\tFound no photos")
-        return []
+        if "continue" in data and "gsroffset" in data["continue"]:
+            params["gsroffset"] = data["continue"]["gsroffset"]
+        else:
+            next_page = False
+    return out
 
 
 def get_revision(q):
