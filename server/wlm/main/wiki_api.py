@@ -154,9 +154,9 @@ def search_commons(id, is_commons=False):
     }
 
     if not is_commons:
-        params["gsrsearch"] = '"' + id + '"',
+        params["gsrsearch"] = '"' + id + '" "Wiki Loves Monuments Italia"',
     else:
-        params["titles"] = '"' + id + '"',
+        params["titles"] = '"' + id + '" "Wiki Loves Monuments Italia"',
         
 
     r = requests.get(COMMONS_URL, params)
