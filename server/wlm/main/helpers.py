@@ -499,6 +499,8 @@ def update_monument(
         aggregates = monument.pictures.all().aggregate(first_image_date=models.Min("image_date"))
         monument.first_image_date_commons = aggregates["first_image_date"]
 
+        monument.save()
+
     # updating current states
     monument.refresh_from_db()
     if monument.first_image_date and monument.first_image_date <= monument.snapshot.created.date():
@@ -986,7 +988,7 @@ def create_export(snapshot):
             
             page_size = 100
             for idx, monument in enumerate(monuments.iterator(page_size)):
-                #print(records)
+                print(idx)
                 #logger.info(f"exporting page {page_num} of {paginator.num_pages}")
                 # logger.info(f"{page}")
                 #page = paginator.page(page_num)

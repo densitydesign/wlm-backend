@@ -59,7 +59,7 @@ def get_history(monuments_qs, query_params, group=None, mode='wlm'):
 @method_decorator(cache_page(None, cache="views"), name="dispatch")
 class DomainView(APIView):
     def get(self, request):
-        categories = Category.objects.all()
+        categories = Category.objects.all().order_by('group', 'q_number')
         cat_serializer = CategorySerializer(categories, many=True)
         try:
             last_snapshot = Snapshot.objects.filter(complete=True).latest('created')
@@ -410,15 +410,15 @@ class MonumentViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(methods=["get"], detail=False)
     def csv(self, request):
+        
         try:
             last_snapshot = Snapshot.objects.filter(complete=True).latest('created')
         except Snapshot.DoesNotExist:
             last_snapshot = None
-        
         if last_snapshot is None or last_snapshot.csv_export is None:
             return Response(status=404)
-
         url = request.build_absolute_uri(last_snapshot.csv_export.url)
+        
         return HttpResponseRedirect(url)
 
     @action(methods=["get"], detail=False)
