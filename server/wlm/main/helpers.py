@@ -1,4 +1,5 @@
 from cmath import inf
+from retry import retry
 from django.core.paginator import Paginator
 import tempfile
 import csv
@@ -543,7 +544,7 @@ def update_category(
         except Exception as e:
             logger.exception(e)
 
-
+@retry(tries=5, delay=5)
 def get_category_snapshot_payload(cat_snapshot):
     logger.info(f"get_category_snapshot_payload {cat_snapshot.category.label}")
     if not cat_snapshot.payload:
