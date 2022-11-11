@@ -1000,7 +1000,7 @@ def create_export(snapshot):
                 
                 row = serialize_monument_for_export(monument)
                 csv_writer.writerow(row)
-                worksheet.write_row(idx, 0, [row.get(field, '') for field in EXPORT_MONUMENTS_HEADER])
+                worksheet.write_row(idx+1, 0, [row.get(field, '') for field in EXPORT_MONUMENTS_HEADER])
 
 
             # finalizing exports
