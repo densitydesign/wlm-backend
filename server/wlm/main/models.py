@@ -111,6 +111,7 @@ class Monument(models.Model):
     relevant_images = models.JSONField(default=list)
 
     first_revision = models.DateTimeField(blank=True, null=True, db_index=True)
+    approved_by = models.CharField(max_length=200, blank=True, default='')
 
     municipality = models.ForeignKey(Municipality, models.SET_NULL, null=True, blank=True, related_name='monuments')
     province = models.ForeignKey(Province, models.SET_NULL, blank=True,  null=True, related_name='monuments')
@@ -122,6 +123,9 @@ class Monument(models.Model):
 
     first_image_date = models.DateField(blank=True, null=True, db_index=True)
     first_image_date_commons = models.DateField(blank=True, null=True, db_index=True)
+
+    most_recent_wlm_image_date = models.DateField(blank=True, null=True)
+    most_recent_commons_image_date = models.DateField(blank=True, null=True)
 
     current_wlm_state = models.CharField(blank=True, default='', max_length=20)
     current_commons_state = models.CharField(blank=True, default='', max_length=20)

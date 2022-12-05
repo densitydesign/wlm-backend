@@ -446,6 +446,8 @@ def update_monument(
 
     first_revision = get_revision(code)
 
+    approved_by = monument_data.get("approvedBy_n", "")
+
     defaults = {
         "label":label,
         "wlm_n":wlm_n,
@@ -457,6 +459,7 @@ def update_monument(
         "snapshot":category_snapshot.snapshot,
         "parent_q_number":parent_q_number,
         "relevant_images":relevant_images,
+        "approved_by":approved_by,
     }
 
     if not skip_geo and position is not None:
@@ -494,11 +497,13 @@ def update_monument(
                 update_image(monument, image, "wlm")
                 wlm_pics_collected += 1
 
-        aggregates = monument.pictures.filter(image_type="wlm").aggregate(first_image_date=models.Min("image_date"))
-        monument.first_image_date = aggregates["first_image_date"]
+        aggregates = monument.pictures.filter(image_type="wlm").aggregate(first_image_date=models.Min("image_date"), last_image_date=models.Max("image_date"))
+        monument.most_recent_wlm_image_date = aggregates["first_image_date"]
+        monument.last_image_date = aggregates["last_image_date"]
 
-        aggregates = monument.pictures.all().aggregate(first_image_date=models.Min("image_date"))
+        aggregates = monument.pictures.all().aggregate(first_image_date=models.Min("image_date"), last_image_date=models.Max("image_date"))
         monument.first_image_date_commons = aggregates["first_image_date"]
+        monument.most_recent_commons_image_date = aggregates["last_image_date"]
 
         monument.save()
 
@@ -890,10 +895,13 @@ EXPORT_MONUMENTS_HEADER = [
     "wlm_id",
     "wlm_auth_start_date",
     "wlm_auth_end_date",
+    "approved_by",
     "position",
     "wikidata_creation_date",
     "first_wlm_image_date",
     "first_commons_image_date",
+    "most_recent_wlm_image_date",
+    "most_recent_commons_image_date",
     "municipality_code",
     "province_code",
     "region_code",
@@ -940,10 +948,13 @@ class MonumentExportSerializer(serializers.ModelSerializer):
             "wlm_id",
             "wlm_auth_start_date",
             "wlm_auth_end_date",
+            "approved_by",
             "position",
             "wikidata_creation_date",
-            "first_commons_image_date",
             "first_wlm_image_date",
+            "first_commons_image_date",
+            "most_recent_wlm_image_date",
+            "most_recent_commons_image_date",
             "municipality_code",
             "province_code",
             "region_code",
