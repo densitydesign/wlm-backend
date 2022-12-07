@@ -417,13 +417,6 @@ def update_monument(
     except Monument.DoesNotExist:
         pass
     
-    # try:
-    #     monument = Monument.objects.get(q_number=code)
-    #     if not reset_pictures and monument.snapshot == category_snapshot.snapshot or category_only:
-    #         monument.categories.add(category)
-    #         logger.log(logging.INFO, f"Skipping monument {code} - already updated in this snapshot")
-    #         return monument
-
     logger.log(logging.INFO, f"Updating monument {code}")
 
     label = monument_prop(monument_data, "monLabel", "")
@@ -498,8 +491,8 @@ def update_monument(
                 wlm_pics_collected += 1
 
         aggregates = monument.pictures.filter(image_type="wlm").aggregate(first_image_date=models.Min("image_date"), last_image_date=models.Max("image_date"))
-        monument.most_recent_wlm_image_date = aggregates["first_image_date"]
-        monument.last_image_date = aggregates["last_image_date"]
+        monument.first_image_date = aggregates["first_image_date"]
+        monument.most_recent_wlm_image_date = aggregates["last_image_date"]
 
         aggregates = monument.pictures.all().aggregate(first_image_date=models.Min("image_date"), last_image_date=models.Max("image_date"))
         monument.first_image_date_commons = aggregates["first_image_date"]
