@@ -35,7 +35,8 @@ def get_last_import(request, **kwargs):
     
     agg = Snapshot.objects.aggregate(last_import=models.Max("created"))
     return agg["last_import"]
-    
+
+LONG_CACHE = 60 * 60 * 24 * 30
 
 def get_history(monuments_qs, query_params, group=None, mode='wlm'):
     ser = WLMQuerySerializer(data=query_params)
@@ -56,7 +57,7 @@ def get_history(monuments_qs, query_params, group=None, mode='wlm'):
 
 @method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
 @method_decorator(cache_control(max_age=0, public=True), name="dispatch")
-@method_decorator(cache_page(None, cache="views"), name="dispatch")
+@method_decorator(cache_page(LONG_CACHE, cache="views"), name="dispatch")
 class DomainView(APIView):
     def get(self, request):
         categories = Category.objects.all().order_by('group', 'q_number')
@@ -85,7 +86,7 @@ class DomainView(APIView):
 
 @method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
 @method_decorator(cache_control(max_age=0, public=True), name="dispatch")
-@method_decorator(cache_page(None, cache="views"), name="dispatch")
+@method_decorator(cache_page(LONG_CACHE, cache="views"), name="dispatch")
 class RegionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Region.objects.all()
     serializer_class = RegionSerializer
@@ -184,7 +185,7 @@ class RegionViewSet(viewsets.ReadOnlyModelViewSet):
 
 @method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
 @method_decorator(cache_control(max_age=0, public=True), name="dispatch")
-@method_decorator(cache_page(None, cache="views"), name="dispatch")
+@method_decorator(cache_page(LONG_CACHE, cache="views"), name="dispatch")
 class ProvinceViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Province.objects.all()
     serializer_class = ProvinceSerializer
@@ -252,7 +253,7 @@ class ProvinceViewSet(viewsets.ReadOnlyModelViewSet):
 
 @method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
 @method_decorator(cache_control(max_age=0, public=True), name="dispatch")
-@method_decorator(cache_page(None, cache="views"), name="dispatch")
+@method_decorator(cache_page(LONG_CACHE, cache="views"), name="dispatch")
 class MunicipalityViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Municipality.objects.all()
     serializer_class = MunicipalitySerializer
@@ -383,7 +384,7 @@ class CSVStream:
 
 @method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
 @method_decorator(cache_control(max_age=0, public=True), name="dispatch")
-@method_decorator(cache_page(None, cache="views"), name="dispatch")
+@method_decorator(cache_page(LONG_CACHE, cache="views"), name="dispatch")
 class MonumentViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Monument.objects.all().select_related('region', 'province', 'municipality').order_by('pk')
     serializer_class = MonumentSerializer
@@ -448,7 +449,7 @@ class MonumentViewSet(viewsets.ReadOnlyModelViewSet):
 
 @method_decorator(condition(last_modified_func=get_last_import), name="dispatch")
 @method_decorator(cache_control(max_age=0, public=True), name="dispatch")
-@method_decorator(cache_page(None, cache="views"), name="dispatch")
+@method_decorator(cache_page(LONG_CACHE, cache="views"), name="dispatch")
 class PictureViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Picture.objects.all()
     serializer_class = PictureSerializer
