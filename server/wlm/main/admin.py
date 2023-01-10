@@ -19,6 +19,11 @@ class CategorySnapshotAdmin(admin.ModelAdmin):
     readonly_fields = ['has_payload', 'updated']
     list_display = ['__str__', 'updated', 'complete']
 
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        queryset = queryset.select_related('category').defer('payload', 'query')
+        return queryset
+
 admin.site.register(CategorySnapshot, CategorySnapshotAdmin)
 
 
