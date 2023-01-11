@@ -10,7 +10,6 @@ The application is based on the python language and the "django" web framework (
 
 The application has no public user interface, but exposes a web-based administrative interface used for configuration and database inspection purposes.
 
-
 # Project dependecies and application stack
 
 The django web application depends on the following services:
@@ -55,7 +54,6 @@ To summarize, the database handles the following entities:
 - Snapshots
 - Snapshot categories, corresponding to the SPARQL queries configured in the project
 
-
 ## APIs
 
 The REST APIs are developed using `django-rest-framework` and follow the project conventions.
@@ -70,8 +68,6 @@ TODO:
 TODO: 
 - explain how data scraping happens (sparql + wiki)
 - sparql query configuration in codebase
-
-
 
 # Development
 TODO:
@@ -120,18 +116,38 @@ Enter a desired username and the related password in order to obtain an administ
 which you'll use to schedule the scraping process.
 
 ## importing geo layers
+
+In order to provide geographic based lookups and aggregations, the application must be initialized with the italian administrative borders, at 3 levels (regions, provinces and municipalities).
+The municipal borders are imported with two different of detail, one used for geographic lookups (to identify municipality of a monument from its coordinates) and one used for rendering the borders in the client application
+
+The geographic layers should be provided as shapefiles with the structure described here:
+
+https://www.istat.it/it/files//2018/10/Descrizione-dei-dati-geografici-2020-03-19.pdf
+
+At the moment, the application has been initialized with the files available at these links, updated ad 01 january 2022:
+- Simplified borders: https://www.istat.it/storage/cartografia/confini_amministrativi/generalizzati/Limiti01012022_g.zip
+- Detailed borders: https://www.istat.it/storage/cartografia/confini_amministrativi/non_generalizzati/Limiti01012022.zip
+
+There is a utility script that downloads and imports the data from the links described above
+
 sh default_geo.sh
 
-[or python manage.py update_geo ....]
+If the files are already on the filesystem or we want to import custom shapefile, the `update_geo` management command is available, with the following syntax:
 
-TODO:
-- explain better how to import and define source format
+usage: manage.py update_geo [-h] [--dry-run] [--version] [-v {0,1,2,3}] [--settings SETTINGS] [--pythonpath PYTHONPATH]
+                            [--traceback] [--no-color] [--force-color] [--skip-checks]
+                            regions_path provinces_path municipalities_path municipalities_lookup_path
 
+(Updates geo data and link from monuments to municipalities)
+
+positional arguments:
+  regions_path
+  provinces_path
+  municipalities_path
+  municipalities_lookup_path
 
 ## Snapshot jobs configuration
 TODO:
 - scheduling 
-
-
 
 
