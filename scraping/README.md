@@ -1,3 +1,5 @@
+# ⚠️⚠️⚠️ DEPRECATED ⚠️⚠️⚠️
+
 These are scripts to retrieve data about Wiki Loves Monuments IT from WikiData.
 
 ###### 1. types_to_search.json
