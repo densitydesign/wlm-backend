@@ -30,7 +30,7 @@ services:
       - 80:80
     
   wlm_server:
-    image: docker.inmagik.com/wlm/server
+    image: wikimediait/wlm-server
     restart: always
     command: >
         bash -c "python manage.py collectstatic --noinput
@@ -42,7 +42,7 @@ services:
       - ./fixtures:/fixtures
 
   wlm_cronjobber:
-    image: docker.inmagik.com/wlm/server
+    image: wikimediait/wlm-server
     restart: always
     command: cronjobber
     volumes:
@@ -50,7 +50,7 @@ services:
       - ./dockerdata/server:/data
 
   wlm_worker:
-    image: docker.inmagik.com/wlm/server
+    image: wikimediait/wlm-server
     restart: always
     command: python manage.py rqworker
     volumes:
