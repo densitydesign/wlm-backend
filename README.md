@@ -44,7 +44,7 @@ To summarize, the database handles the following entities:
 **Application domain entites**:
 
 - Monuments: the main entiry that is visualized in the frontend
-- Pictures: data associated to monuments pictures (both wlm and mediawiki)
+- Pictures: data associated to monuments pictures, both WLM photos and Wikidata Images (property P18)
 - Categories: categories of queries of monuments, related to the SPARQL queries used for data scraping
 
 **Geographic entites**:
@@ -63,7 +63,7 @@ All the apis are public.
 
 Once the project is installed on a server or running locally, a web page with a "swagger" interface is exposed at the url:
 
-/api/schema/swagger-ui/
+`/api/schema/swagger-ui/`
 
 ## Data scraping
 
@@ -93,9 +93,9 @@ The implementation of the data scraping feature allows to extend the SPARQL quer
 
 This set of SPARQL queries was setup to address specific filters and are self contained, i.e. the don't need any parameter to be run. They are contained in the following files:
 
-server/wlm/main/SPARQL-contest.txt
-server/wlm/main/SPARQL-contest.txt
-server/wlm/main/SPARQL-municipalities-views.txt
+- `server/wlm/main/SPARQL-contest.txt`
+- `server/wlm/main/SPARQL-fortifications.txt`
+- `server/wlm/main/SPARQL-municipalities-views.txt`
 
 In order to extend the system to add more of these queries, the costant `WLM_QUERIES` in the file server/wlm/main/wiki_api.py must be changed, and the relative text file containing the query must be added to the project.
 
@@ -104,13 +104,13 @@ In order to extend the system to add more of these queries, the costant `WLM_QUE
 There is another type of queries setup in the system, based on a single SPARQL query defined to gather monuments pertaining to a specific Wikipedia category, expressed by a `Q number`
 Such query is described in the file:
 
-server/wlm/main/SPARQL-typologies.txt
+- `server/wlm/main/SPARQL-typologies.txt`
 
-in this file, the symbol `wd:Q_NUMBER_TYPE` must be replaced with the actual Q number referring to the category we want to search. These categories and the replacement are handled automatically by the project.
+In this file, the symbol `wd:Q_NUMBER_TYPE` must be replaced with the actual Q number referring to the category we want to search. These categories and the replacement are handled automatically by the project.
 
 In order to extend the categories for which the query is run, the following file must be edited:
 
-wlm/main/WIKI_CANDIDATE_TYPES.csv
+- `wlm/main/WIKI_CANDIDATE_TYPES.csv`
 
 This file is a csv containing a row for each category, with the attributes q_number,label,group that must be provided.
 
@@ -140,13 +140,13 @@ Here we describe the installation process based on docker and docker compose.
 
 1. Install docker (https://docs.docker.com/get-docker/)
 2. Install docker-compose (https://docs.docker.com/compose/install/other/) or the docker "compose" plugin (https://docs.docker.com/compose/install/linux/)
-3. Create a target folder for the application files on the server. In our case we'll use the `/srv/wlm-it-app/' folder
+3. Create a target folder for the application files on the server. In our case we'll use the `/srv/wlm-it-app/` folder
 4. Copy all files from the "deploy_docker" folder of the repo to our target folder.
 
 At the end of these steps, you should:
 
 - be able to run the "docker-compose ps" command
-- have the files "docker-compose.yml", "localsettings.py" and "nginx.conf" in your `/srv/wlm-it-app/' folder
+- have the files "docker-compose.yml", "localsettings.py" and "nginx.conf" in your `/srv/wlm-it-app/` folder
 
 ## Login to docker, pull the docker-compose stack and start the services
 
@@ -177,6 +177,8 @@ which you'll use to schedule the scraping process.
 
 ## Importing geo layers
 
+The application uses ISTAT data for handling visualization and lookups of data.
+
 In order to provide geographic based lookups and aggregations, the application must be initialized with the italian administrative borders, at 3 levels (regions, provinces and municipalities).
 The municipal borders are imported with two different of detail, one used for geographic lookups (to identify municipality of a monument from its coordinates) and one used for rendering the borders in the client application
 
@@ -191,7 +193,7 @@ At the moment, the application has been initialized with the files available at 
 
 There is a utility script that downloads and imports the data from the links described above
 
-sh default_geo.sh
+`sh default_geo.sh`
 
 If the files are already on the filesystem or we want to import custom shapefile, the `update_geo` management command is available, with the following syntax:
 
@@ -202,10 +204,10 @@ regions_path provinces_path municipalities_path municipalities_lookup_path
 (Updates geo data and link from monuments to municipalities)
 
 positional arguments:
-regions_path
-provinces_path
-municipalities_path
-municipalities_lookup_path
+- regions_path
+- provinces_path
+- municipalities_path
+- municipalities_lookup_path
 
 ## Admin interface
 
@@ -224,7 +226,7 @@ This is custom django app implemented for the snapshot scheduling. The only enti
 
 Il allows to enter scheduling in two ways:
 
-- by entering an unix cron like syntax (for recurring jobs) (https://en.wikipedia.org/wiki/Cron)
+- by entering an unix cron like syntax (for recurring jobs) ([https://en.wikipedia.org/wiki/Cron](https://en.wikipedia.org/wiki/Cron))
 - by specifying date and time for single runs
 
 To create a new schedule: click on the "add job" button in the top right.
