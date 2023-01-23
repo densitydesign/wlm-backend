@@ -177,7 +177,7 @@ which you'll use to schedule the scraping process.
 
 ## Importing geo layers
 
-The application uses ISTAT data for handling visualization and lookups of data.
+The application uses [administrative borders data](https://www.istat.it/it/archivio/222527) realized by ISTAT ([CC-by 3.0](https://www.istat.it/en/analysis-and-products/open-data-in-istat)) for handling visualization and lookups of data.
 
 In order to provide geographic based lookups and aggregations, the application must be initialized with the italian administrative borders, at 3 levels (regions, provinces and municipalities).
 The municipal borders are imported with two different of detail, one used for geographic lookups (to identify municipality of a monument from its coordinates) and one used for rendering the borders in the client application
