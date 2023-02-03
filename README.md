@@ -251,3 +251,35 @@ This section may also be used to inspect the snapshot process, by looking at the
 - `Category snapshots` is the temporary entity used to track and resume the snapshot procedure. Once the snapshot is complete the category snapshots should be empty, but when a snapshot is running you should see a list of all the categories defined by SPARQL queries with their completion state. The actual query is also present in the interface
 
 The `Monuments` and `Pictures` sections contain the actual data served by the rest API.
+
+
+## UPDATING THE SERVER
+In order to update the current installation on the production server, the following procedure should be followed.
+
+### Docker image update
+
+- make changes to the code, commit and push to the repository
+- install docker in your local machine
+- login into docker hub by issuing the command `docker login` (you should have the credentials to login with a user with the push permissions on the *wikimediait* organization on docker hub)
+- build the image by running the script "build_image.sh" in the "server" folder of the repo
+
+If you get no errors from the build script, the image should be pushed to the docker registry.
+
+### Server update
+
+The next step involves logging into the server and updating the docker image.
+
+- login into the production server (`ssh -J your-user-name@bastion.wmcloud.org your-user-name@wlmitvisual01.wlm-it-visual.eqiad1.wikimedia.cloud`)
+- change your working directory to the folder: `cd /srv/wlm-it-app`
+- login into docker hub by issuing the command `docker login` (you should have the credentials to login with a user with the push permissions on the *wikimediait* organization on docker hub). (This step could not be necessary as the login persist on the server. You can just skip this step and try execute the next one. If it fails you need to login)
+- pull the image with the command `sudo docker-compose pull` (if this fails you might need to login to docker registry, see the previous step).
+- stop the current stack with the command `sudo docker-compose down`
+- restart the stack with the command `sudo docker-compose up -f`
+
+The server application should restart. It might take some seconds before the app is fully initialized.
+
+**Note** A server update would stop a snapshot in progress. The snapshot will be restarted automatically on the next schedule, but it won't restart automatically if stopped for a server update. If you find yourself in this situation, you can easily re-schedule an immediate start of the snapshot by using the admin interface (see the related section in this file)
+
+
+
+
