@@ -10,6 +10,7 @@ The application is based on the python language and the "django" web framework (
 
 The application has no public user interface, but exposes a web-based administrative interface used for configuration and database inspection purposes.
 
+
 # Project dependecies and application stack
 
 The django web application depends on the following services:
@@ -254,6 +255,20 @@ This section may also be used to inspect the snapshot process, by looking at the
 
 The `Monuments` and `Pictures` sections contain the actual data served by the rest API.
 
+
+## Current production server
+The production server is the following
+
+The production endpoints are served under the following domain:
+
+`https://wlm-it-visual.wmcloud.org`
+
+For example, the admin interface should be reachable at:
+
+`https://wlm-it-visual.wmcloud.org/admin/`
+
+The underlying production server is `wlmitvisual01.wlm-it-visual.eqiad1.wikimedia.cloud`.
+Please consult the wikimedia italy team in order to gain access to this server for dev ops purposes.
 
 ## UPDATING THE SERVER
 In order to update the current installation on the production server, the following procedure should be followed.
