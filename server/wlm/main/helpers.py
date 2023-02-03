@@ -903,6 +903,7 @@ EXPORT_MONUMENTS_HEADER = [
     "region_label",
     "current_wlm_state",
     "current_commons_state",
+    "categories",
 ]
 
 
@@ -930,6 +931,11 @@ class MonumentExportSerializer(serializers.ModelSerializer):
     province_label = serializers.CharField(source="province.name", required=False)
     region_label = serializers.CharField(source="region.name", required=False)
 
+    categories = serializers.SerializerMethodField()
+    def get_categories(self, obj):
+        cats = list(obj.categories.order_by('label').values_list("label", flat=True))
+        return ", ".join(cats)
+
     class Meta:
         model = Monument
         fields = [
@@ -956,6 +962,7 @@ class MonumentExportSerializer(serializers.ModelSerializer):
             "region_label",
             "current_wlm_state",
             "current_commons_state",
+            "categories",
         ]
 
 
@@ -989,19 +996,10 @@ def create_export(snapshot):
             monuments = Monument.objects.filter(
                     snapshot=snapshot, 
                     #municipality__isnull=False
-                ).select_related("region", "province", "municipality").order_by("id")
+                ).select_related("region", "province", "municipality").prefetch_related('categories').order_by("id")
             
             page_size = 100
             for idx, monument in enumerate(monuments.iterator(page_size)):
-                print(idx)
-                #logger.info(f"exporting page {page_num} of {paginator.num_pages}")
-                # logger.info(f"{page}")
-                #page = paginator.page(page_num)
-                # records = page.object_list
-                #x = list(records)
-                #rows = serialize_monuments_for_export(records)
-                #csv_writer.writerows(rows)
-                
                 row = serialize_monument_for_export(monument)
                 csv_writer.writerow(row)
                 worksheet.write_row(idx+1, 0, [row.get(field, '') for field in EXPORT_MONUMENTS_HEADER])
