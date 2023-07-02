@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     'main',
     'cron_tools',
     'debug_toolbar',
+    
+    'authlib', #for oauth2
 ]
 
 MIDDLEWARE = [

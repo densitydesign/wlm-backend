@@ -1,0 +1,6 @@
+Your OAuth consumer request has been received.
+
+You have been assigned a consumer token of b200933a5469c41337c85627939bc485 and a secret token of d21f5227f416da4619da9268798e60964731cdbd. Please record these for future reference.
+
+consumer b200933a5469c41337c85627939bc485
+secret d21f5227f416da4619da9268798e60964731cdbd
