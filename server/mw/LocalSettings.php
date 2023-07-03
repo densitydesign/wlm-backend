@@ -15,6 +15,11 @@ if ( !defined( 'MEDIAWIKI' ) ) {
 	exit;
 }
 
+error_reporting( -1 );
+ini_set( 'display_errors', 1 );
+
+$wgDebugLogFile = "/var/log/mediawiki-debug.log";
+
 
 ## Uncomment this to disable output compression
 # $wgDisableOutputCompression = true;
@@ -134,6 +139,8 @@ wfLoadSkin( 'Vector' );
 
 # End of automatically generated settings.
 # Add more configuration options below.
+$wgOAuth2PrivateKey	= '/var/www/oauth/private.key';
+$wgOAuth2PublicKey	= '/var/www/oauth/public.key';
 
 wfLoadExtension( 'OAuth' );
 $wgGroupPermissions['sysop']['mwoauthproposeconsumer'] = true;
