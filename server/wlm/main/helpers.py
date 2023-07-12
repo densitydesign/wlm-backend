@@ -440,6 +440,7 @@ def update_monument(
     first_revision = get_revision(code)
 
     approved_by = monument_data.get("approvedBy_n", "")
+    
 
     defaults = {
         "label":label,
@@ -521,6 +522,15 @@ def update_monument(
         if wlm_pics_collected > 0 and commons_pics_collected == 0:
             monument.to_review = True
 
+    # computing "in_contest" flag
+    if not monument.start:
+        monument.in_contest = False
+    else:
+        if not monument.end:
+            monument.in_contest = True
+        else:
+            monument.in_contest = monument.end < monument.start
+    
     monument.save()
 
     return monument

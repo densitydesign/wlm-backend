@@ -1,5 +1,5 @@
 from django.contrib.gis import admin
-from main.models import (Region, Province, Municipality, Monument, Picture,  CategorySnapshot, Category, Snapshot)
+from main.models import (Region, Province, Municipality, Monument, Picture,  CategorySnapshot, Category, Snapshot, AppCategory)
 
 admin.site.register(Region)
 admin.site.register(Province)
@@ -34,9 +34,9 @@ class PictureInline(admin.TabularInline):
 
 class MonumentAdmin(admin.ModelAdmin):
     list_filter = ['region', 'province', 'categories', 'start']
-    inlines = [PictureInline]
+    #inlines = [PictureInline]
 
 
 admin.site.register(Monument, MonumentAdmin)
-
+admin.site.register(AppCategory)
 

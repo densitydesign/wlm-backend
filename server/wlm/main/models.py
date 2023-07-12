@@ -17,6 +17,7 @@ class Category(models.Model):
     label = models.CharField(max_length=200)
     q_number = models.CharField(max_length=200)
     group = models.CharField(max_length=200, blank=True, default="")
+    app_category = models.ForeignKey("AppCategory", models.SET_NULL, null=True, blank=True, related_name="categories")
 
     def __str__(self):
         return self.label
@@ -108,7 +109,7 @@ class Monument(models.Model):
     data = models.JSONField(default=dict)
 
     position = models.PointField(blank=True, null=True)
-    relevant_images = models.JSONField(default=list)
+    relevant_images = models.JSONField(default=list, blank=True)
 
     first_revision = models.DateTimeField(blank=True, null=True, db_index=True)
     approved_by = models.CharField(max_length=200, blank=True, default='')
@@ -134,6 +135,8 @@ class Monument(models.Model):
     pictures_wlm_count = models.IntegerField(blank=True, null=True)
     pictures_commons_count = models.IntegerField(blank=True, null=True)
     to_review = models.BooleanField(default=False)
+
+    in_contest = models.BooleanField(default=False, db_index=True)
     
     class Meta:
         index_together = [
@@ -143,6 +146,8 @@ class Monument(models.Model):
 
     def __str__(self):
         return self.label
+    
+
 
 
 class Picture(models.Model):
@@ -160,4 +165,8 @@ class Picture(models.Model):
         ]    
 
 
+class AppCategory(models.Model):
+    name = models.CharField(max_length=200)
 
+    def __str__(self):
+        return self.name
