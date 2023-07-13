@@ -73,7 +73,7 @@ class StandardResultsSetPagination(PageNumberPagination):
 
 class MonumentFilter(filters.FilterSet):
 
-    only_with_pictures = filters.BooleanFilter(label="only_with_pictures", method='filter_only_with_pictures')
+    only_without_pictures = filters.BooleanFilter(label="only_without_pictures", method='filter_only_with_pictures')
     category = filters.CharFilter(method='filter_category')
 
     def filter_category(self, queryset, name, value):
@@ -85,9 +85,9 @@ class MonumentFilter(filters.FilterSet):
             return queryset.filter(categories__pk__in=categories_pks)
         return queryset
     
-    def filter_only_with_pictures(self, queryset, name, value):
+    def filter_only_without_pictures(self, queryset, name, value):
         if(value):
-            return queryset.filter(pictures_wlm_count__gt=0)
+            return queryset.filter(pictures_wlm_count=0)
         else:
             return queryset
         

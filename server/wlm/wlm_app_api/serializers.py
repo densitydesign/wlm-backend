@@ -30,6 +30,7 @@ class MonumentAppDetailSerialier(serializers.ModelSerializer):
     
     pictures = serializers.SerializerMethodField()
     cover_picture = serializers.SerializerMethodField()
+    app_category = serializers.SerializerMethodField()  
 
     def get_pictures(self, obj):
         pictures = obj.pictures.filter(image_type="wlm")
@@ -39,6 +40,12 @@ class MonumentAppDetailSerialier(serializers.ModelSerializer):
         picture = obj.pictures.first()
         if picture:
             return PictureSerializer(picture).data
+
+    def get_app_category(self, obj):
+        category = obj.categories.first()
+        if category:
+            app_cat = category.app_category
+            return getattr(app_cat, "name", None)
         
     
     class Meta:
