@@ -1,3 +1,4 @@
+anycluster==2.3.4
 asgiref==3.5.2
 Authlib==1.2.1
 certifi==2022.6.15

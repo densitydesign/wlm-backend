@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "django_rq",
     "main",
     "cron_tools",
+    "anycluster",
     "debug_toolbar",
     "authlib",  # for oauth2
     "oauth",  # for oauth2
@@ -277,6 +278,8 @@ MEDIA_ROOT = BASE_DIR / "media"
 #     },
 # }
 
+ANYCLUSTER_GEODJANGO_MODEL = "main.Monument"
+ANYCLUSTER_COORDINATES_COLUMN = "position"
 
 
 try:
