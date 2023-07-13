@@ -4,6 +4,8 @@ from main.models import Monument, Picture, AppCategory, Category
 from rest_framework.pagination import PageNumberPagination
 from django_filters import rest_framework as filters
 from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 
 # class MonumentFilter(filters.FilterSet):
@@ -117,7 +119,8 @@ class MonumentAppViewSet(viewsets.ReadOnlyModelViewSet):
         if self.action == 'retrieve':
             return MonumentAppDetailSerialier
         return super().get_serializer_class()
-    
+        
+
 
 
 # Create your views here.
