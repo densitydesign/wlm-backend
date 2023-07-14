@@ -50,12 +50,17 @@ class MonumentAppDetailSerialier(serializers.ModelSerializer):
             return getattr(app_cat, "name", None)
 
     def get_counts_comune_by_app_category(self, obj):
-        app_category = self.app_category.name
-        if app_category == 'Comune':
-            monuments_by_comune = Monument.objects.filter(municipality=obj.municipality).values(
-                'categories__app_category__name').annotate(
-                count=models.Count('categories__app_category__name')).order_by('categories__app_category__name')
-            return monuments_by_comune
+        category = obj.categories.first()
+        if category:
+            app_cat = category.app_category
+            app_category = getattr(app_cat, "name", None)
+            if app_category == 'Comune':
+                monuments_by_category = Monument.objects.filter(municipality=obj.municipality).values(
+                    'categories__app_category__name').annotate(
+                    count=models.Count('categories__app_category__name')).order_by('categories__app_category__name')
+                return monuments_by_category
+            else:
+                return None
         else:
             return None
             
