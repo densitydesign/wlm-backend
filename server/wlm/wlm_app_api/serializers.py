@@ -6,6 +6,7 @@ from django.db import models
 class MonumentAppListSerialier(serializers.ModelSerializer):
     municipality_label = serializers.CharField(source="municipality.name", read_only=True)
     app_category = serializers.SerializerMethodField()  
+    distance = serializers.FloatField(read_only=True, required=False, source="distance.km")
 
     def get_app_category(self, obj):
         category = obj.categories.first()
@@ -17,7 +18,7 @@ class MonumentAppListSerialier(serializers.ModelSerializer):
 
     class Meta:
         model = Monument
-        fields = ['id', 'label', 'municipality_label', 'municipality', 'pictures_wlm_count', 'in_contest', "app_category"]
+        fields = ['id', 'label', 'municipality_label', 'municipality', 'pictures_wlm_count', 'in_contest', "app_category", "distance"]
 
 
 class PictureSerializer(serializers.ModelSerializer):
@@ -33,6 +34,7 @@ class MonumentAppDetailSerialier(serializers.ModelSerializer):
     cover_picture = serializers.SerializerMethodField()
     app_category = serializers.SerializerMethodField()  
     counts_comune_by_app_category = serializers.SerializerMethodField()
+    distance = serializers.FloatField(read_only=True, required=False)
 
     def get_pictures(self, obj):
         pictures = obj.pictures.filter(image_type="wlm")
