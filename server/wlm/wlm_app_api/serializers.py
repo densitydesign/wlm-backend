@@ -34,6 +34,8 @@ class MonumentAppDetailSerialier(serializers.ModelSerializer):
     cover_picture = serializers.SerializerMethodField()
     app_category = serializers.SerializerMethodField()  
     counts_comune_by_app_category = serializers.SerializerMethodField()
+    municipality_label = serializers.CharField(source="municipality.name", read_only=True)
+    province_label = serializers.CharField(source="municipality.province.name", read_only=True)
     distance = serializers.FloatField(read_only=True, required=False)
 
     def get_pictures(self, obj):

@@ -18,7 +18,7 @@ class StandardResultsSetPagination(PageNumberPagination):
 
 class MonumentFilter(filters.FilterSet):
 
-    only_without_pictures = filters.BooleanFilter(label="only_without_pictures", method='filter_only_with_pictures')
+    only_without_pictures = filters.BooleanFilter(label="only_without_pictures", method='filter_only_without_pictures')
     category = filters.CharFilter(method='filter_category')
 
     def filter_category(self, queryset, name, value):
