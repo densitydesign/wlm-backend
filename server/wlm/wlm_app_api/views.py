@@ -157,7 +157,13 @@ class ClusterMonumentsApi(APIView):
             SELECT 
                 cid,
                 properties,
-                ST_AsGeoJSON(ST_Centroid(ST_Collect(position))) AS position, 
+                ST_AsGeoJSON(
+                    ST_Transform(
+                        ST_Centroid(ST_Collect(position)),
+                        'EPSG:4326',
+                        'EPSG:3857'
+                    )
+                ) AS position, 
                 count(id) AS ids 
 
             FROM (
