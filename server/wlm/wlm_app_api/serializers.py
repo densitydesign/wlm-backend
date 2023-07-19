@@ -1,7 +1,8 @@
 from main.models import Monument, Picture
 from rest_framework import serializers
+from rest_framework_gis.serializers import GeometryField, GeoFeatureModelSerializer, GeometrySerializerMethodField
 from django.db import models
-
+import json
 
 class MonumentAppListSerialier(serializers.ModelSerializer):
     municipality_label = serializers.CharField(source="municipality.name", read_only=True)
@@ -75,8 +76,23 @@ class MonumentAppDetailSerialier(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class ClusterSerializer(serializers.Serializer):
+    position = serializers.SerializerMethodField()
+
+    #count = serializers.IntegerField()
+    #ids = serializers.ListField(child=serializers.IntegerField())
+    ids = serializers.IntegerField()
+    cid = serializers.IntegerField()
+
+    def get_position(self, obj):
+        return json.loads(obj["position"])
 
 
+class ClusterGeoSerializer(serializers.Serializer):
+    position = GeometryField()
+    properties = serializers.DictField(required=False)
 
-
+    #count = serializers.IntegerField()
+    ids = serializers.ListField(child=serializers.IntegerField())
+    cid = serializers.IntegerField()
 
