@@ -137,6 +137,7 @@ def search_commons_wlm(wlm_id):
             for pageid in data["query"]["pages"]:
                 image = data["query"]["pages"][str(pageid)]
                 temp_obj = {}
+                
                 if "pageid" in image:
                     temp_obj["pageid"] = image["pageid"]
                 if "title" in image:
@@ -148,12 +149,20 @@ def search_commons_wlm(wlm_id):
                     if "DateTime" in extmetadata and "value" in extmetadata["DateTime"]:
                         temp_obj["DateTime"] = extmetadata["DateTime"]["value"]
 
+                    if "Artist" in extmetadata and "value" in extmetadata["Artist"]:
+                        temp_obj["Artist"] = extmetadata["Artist"]["value"]
+                    if "License" in extmetadata and "value" in extmetadata["License"]:
+                        temp_obj["License"] = extmetadata["License"]["value"]
+                    if "ImageDescription" in extmetadata and "value" in extmetadata["ImageDescription"]:
+                        temp_obj["ImageDescription"] = extmetadata["ImageDescription"]["value"]
+
                 out.append(temp_obj)
         
         if "continue" in data and "gsroffset" in data["continue"]:
             params["gsroffset"] = data["continue"]["gsroffset"]
         else:
             next_page = False
+    
     return out
 
 

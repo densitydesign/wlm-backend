@@ -15,7 +15,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         
         out = search_commons_wlm(options['wlm'])
-        print(out)
+        
         
         
 
