@@ -1,10 +1,11 @@
+import json
 from rest_framework import viewsets
 from rest_framework.views import APIView
 from django.contrib.gis.geos import Point
 from rest_framework.exceptions import APIException
 from django.db import models
 from .serializers import MonumentAppListSerialier, MonumentAppDetailSerialier, ClusterSerializer
-from main.models import Monument, Picture, AppCategory, Category
+from main.models import Monument, Picture, AppCategory, Category, Municipality
 from rest_framework.pagination import PageNumberPagination
 from django_filters import rest_framework as filters
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -99,12 +100,12 @@ def clusters_to_feature_collection(clusters):
             "ids": cluster["ids"]
         }
         if "properties" in cluster and cluster["properties"]:
-            properties.update(cluster["properties"])
-
+            properties.update(json.loads(cluster["properties"]))
+        
         features.append(
             {
                 "type": "Feature",
-                "geometry": cluster["position"],
+                "geometry": json.loads(cluster["position"]),
                 "properties": properties,
             }
         )
@@ -123,11 +124,11 @@ def get_eps_for_resolution(res):
     # else:
     #     x = 1500
     if res > 1000:
-        x = 2400
+        x = 8000
     elif res > 500:
-        x = 1200
+        x = 4000
     else:
-        x = 40
+        x = 50
     out = meters_to_degrees(float(x))
     return out
 
@@ -154,6 +155,37 @@ class ClusterMonumentsApi(APIView):
         eps = get_eps_for_resolution(float(resolution))
         print("eps", eps)
 
+        municipality = request.query_params.get("municipality", None)
+        only_without_pictures = request.query_params.get("only_without_pictures", None)
+        in_contest = request.query_params.get("in_contest", None)
+        category = request.query_params.get("category", None)
+        search = request.query_params.get("search", None)
+
+
+        filter_condition = ""
+        if municipality:
+            filter_condition += f" AND main_monument.municipality_id = {municipality}"
+        if only_without_pictures:
+            filter_condition += f" AND (pictures_wlm_count = 0 OR pictures_wlm_count IS NULL)"
+        if in_contest:
+            filter_condition += f" AND in_contest = True"
+        if category:
+            print(category)
+            app_category = AppCategory.objects.get(name__iexact=category)
+            if not app_category:
+                raise APIException("Invalid category")
+            categories_pks = app_category.categories.values_list("pk", flat=True)
+            filter_condition += f" AND main_monument_categories.category_id IN ({','.join([str(pk) for pk in categories_pks])})"
+
+        # if search:
+        #     or_condition = "TRUE"
+        #     municipality_search  = Municipality.objects.filter(name__icontains=search).values_list("pk", flat=True)
+        #     if municipality_search.exists():
+        #         or_condition += f" OR main_monument.municipality_id IN ({','.join([str(pk) for pk in municipality_search])})"
+            
+        #     filter_condition += f" AND (main_monument.label ILIKE '%{search}%' OR {or_condition})"
+
+
     
 
         cursor = connection.cursor()
@@ -179,18 +211,23 @@ class ClusterMonumentsApi(APIView):
 
                 
             FROM (
-                SELECT id, ST_ClusterDBSCAN(position, eps := {eps}, minpoints := 4) over () AS cidx, position,
-                jsonb_build_object('label', label) as properties 
-                FROM main_monument
+                SELECT main_monument.id as id, ST_ClusterDBSCAN(position, eps := {eps}, minpoints := 4) over () AS cidx, position,
+                jsonb_build_object(
+                    'id', main_monument.id,
+                    'categories',  array_agg(main_monument_categories.category_id),
+                    'label', label, 
+                    'in_contest', in_contest, 
+                    'pictures_wlm_count', pictures_wlm_count) as properties 
+                FROM main_monument JOIN main_monument_categories ON main_monument.id = main_monument_categories.monument_id
                 {bbox_condition}
+                {filter_condition}
+                GROUP BY main_monument.id
             ) sq) sq2
             GROUP BY cid, properties
             """
         )
         rows = dictfetchall(cursor)
-        print(rows[-1])
-        ser = ClusterSerializer(rows, many=True)
-        out = clusters_to_feature_collection(ser.data)
+        out = clusters_to_feature_collection(rows)
         return Response(out)
 
         
