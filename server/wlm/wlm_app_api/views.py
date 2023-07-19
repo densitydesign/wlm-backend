@@ -133,6 +133,23 @@ def get_eps_for_resolution(res):
     return out
 
 
+class CategoriesDomainApi(APIView):
+    def get(self, request):
+        """
+        """
+        app_category_with_categories = AppCategory.objects.filter(categories__isnull=False).distinct()
+        data = []
+        for app_category in app_category_with_categories:
+            data.append(
+                {
+                    "name": app_category.name,
+                    "categories": [category.pk for category in app_category.categories.all()],
+                }
+            )
+        return Response(data)
+
+
+
 class ClusterMonumentsApi(APIView):
     def get(self, request):
         """
