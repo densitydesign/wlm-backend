@@ -112,17 +112,22 @@ def clusters_to_feature_collection(clusters):
 
 
 def get_eps_for_resolution(res):
-    print(res)
-    if res > 4000:
-        x = 5000
-    elif res > 3000:
-        x = 6000
-    elif res > 2000:
-        x = 4000
-    elif res > 1000:
-        x  = 2500
+    # if res > 4000:
+    #     x = 5000
+    # elif res > 3000:
+    #     x = 6000
+    # elif res > 2000:
+    #     x = 4000
+    # elif res > 1000:
+    #     x  = 2500
+    # else:
+    #     x = 1500
+    if res > 1000:
+        x = 2400
+    elif res > 500:
+        x = 1200
     else:
-        x = 1500
+        x = 40
     out = meters_to_degrees(float(x))
     return out
 
