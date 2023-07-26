@@ -10,10 +10,25 @@ class MonumentAppListSerialier(serializers.ModelSerializer):
     distance = serializers.FloatField(read_only=True, required=False, source="distance.km")
 
     def get_app_category(self, obj):
-        category = obj.categories.first()
+        category = obj.categories.all()
+        app_cat = None
         if category:
-            app_cat = category.app_category
-            return getattr(app_cat, "name", None)
+            if len(category) > 1:
+                for cat in category:
+                    if cat.app_category and cat.app_category.name != "Altri monumenti":
+                        app_cat = cat.app_category
+                        return getattr(app_cat, "name", None)
+                    else:
+                        continue
+                if app_cat == None:
+                    return "Altri monumenti"
+                        
+            else: 
+                category = category.first() 
+                app_cat = category.app_category
+                return getattr(app_cat, "name", None)
+        else:
+            return None
 
     
 

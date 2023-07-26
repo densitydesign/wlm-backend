@@ -113,18 +113,8 @@ def clusters_to_feature_collection(clusters):
 
 
 def get_eps_for_resolution(res):
-    # if res > 4000:
-    #     x = 5000
-    # elif res > 3000:
-    #     x = 6000
-    # elif res > 2000:
-    #     x = 4000
-    # elif res > 1000:
-    #     x  = 2500
-    # else:
-    #     x = 1500
     if res > 1000:
-        x = 8000
+        x = 4000
     elif res > 500:
         x = 4000
     else:
@@ -148,8 +138,6 @@ class CategoriesDomainApi(APIView):
             )
         return Response(data)
 
-
-
 class ClusterMonumentsApi(APIView):
     def get(self, request):
         """
@@ -167,16 +155,13 @@ class ClusterMonumentsApi(APIView):
         resolution = request.query_params.get("resolution", None)
         if not resolution:
             raise APIException("resolution is required")
-        
-        print(resolution)
+    
         eps = get_eps_for_resolution(float(resolution))
-        print("eps", eps)
 
         municipality = request.query_params.get("municipality", None)
         only_without_pictures = request.query_params.get("only_without_pictures", None)
         in_contest = request.query_params.get("in_contest", None)
         category = request.query_params.get("category", None)
-        search = request.query_params.get("search", None)
 
 
         filter_condition = ""
@@ -193,17 +178,6 @@ class ClusterMonumentsApi(APIView):
                 raise APIException("Invalid category")
             categories_pks = app_category.categories.values_list("pk", flat=True)
             filter_condition += f" AND main_monument_categories.category_id IN ({','.join([str(pk) for pk in categories_pks])})"
-
-        # if search:
-        #     or_condition = "TRUE"
-        #     municipality_search  = Municipality.objects.filter(name__icontains=search).values_list("pk", flat=True)
-        #     if municipality_search.exists():
-        #         or_condition += f" OR main_monument.municipality_id IN ({','.join([str(pk) for pk in municipality_search])})"
-            
-        #     filter_condition += f" AND (main_monument.label ILIKE '%{search}%' OR {or_condition})"
-
-
-    
 
         cursor = connection.cursor()
         cursor.execute(
@@ -234,6 +208,7 @@ class ClusterMonumentsApi(APIView):
                     'categories',  array_agg(main_monument_categories.category_id),
                     'label', label, 
                     'in_contest', in_contest, 
+                    'position', position,
                     'pictures_wlm_count', pictures_wlm_count) as properties 
                 FROM main_monument JOIN main_monument_categories ON main_monument.id = main_monument_categories.monument_id
                 {bbox_condition}
