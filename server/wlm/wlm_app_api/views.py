@@ -113,6 +113,8 @@ def clusters_to_feature_collection(clusters):
 
 
 def get_eps_for_resolution(res):
+    if res > 10000:
+        x = 5000
     if res > 1000:
         x = 4000
     elif res > 500:
@@ -172,7 +174,6 @@ class ClusterMonumentsApi(APIView):
         if in_contest:
             filter_condition += f" AND in_contest = True"
         if category:
-            print(category)
             app_category = AppCategory.objects.get(name__iexact=category)
             if not app_category:
                 raise APIException("Invalid category")

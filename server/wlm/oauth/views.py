@@ -83,19 +83,19 @@ oauth = WLMOauth(update_token=update_token)
 
 
 params = {
-    "client_id": "b200933a5469c41337c85627939bc485",
-    "client_secret": "d21f5227f416da4619da9268798e60964731cdbd",
-    "access_token_url": "http://localhost:8080/rest.php/oauth2/access_token",
+    "client_id": "dea9920f4fcc0c8c5d5d8e0dfdc08f1d",
+    "client_secret": "d35aa219a7b8b5683a0c9f8f764ee74951cdba3f",
+    "access_token_url": "http://wlm.inmagik.com:8080/rest.php/oauth2/access_token",
     "access_token_params": {
         "grant_type": "authorization_code",
     },
-    "authorize_url": "http://localhost:8080/rest.php/oauth2/authorize",
+    "authorize_url": "http://wlm.inmagik.com:8080/rest.php/oauth2/authorize",
     "authorize_params": {},
     "refresh_token_url": None,
     "client_kwargs": {
         "code_challenge_method": "S256",
     },
-    "api_base_url": "http://localhost:8080/rest.php/oauth2/resource/",
+    "api_base_url": "http://wlm.inmagik.com:8080/rest.php/oauth2/resource/",
 }
 
 """
@@ -115,8 +115,11 @@ def login(request):
 
 def authorize(request):
     token = oauth.mediawiki.authorize_access_token(request)
-    resp = oauth.mediawiki.get("profile", token=token)
+    resp = requests.get("http://wlm.inmagik.com:8080/rest.php/oauth2/resource/profile", headers={"Authorization": "Bearer " + token["access_token"]})
+    # resp = oauth.mediawiki.get("profile", token=token)
+    print(resp.text)
     profile = resp.json()
+    # print(profile, token, 'token', resp)
     username = "mw--" + profile["username"]
 
     user = User.objects.filter(username=username).first()
@@ -183,7 +186,7 @@ class WMProfileView(APIView):
         token = OAuth2Token.objects.get(user=request.user, name="mediawiki")
         #resp = oauth.mediawiki.get("profile", token=token.to_token())
         auth = OAuth2Auth(token.to_token())
-        profile_url = "http://localhost:8080/rest.php/oauth2/resource/profile"
+        profile_url = "http://wlm.inmagik.com:8080/rest.php/oauth2/resource/profile"
         resp = requests.get(profile_url, auth=auth)
         profile = resp.json()
         return Response(profile)    

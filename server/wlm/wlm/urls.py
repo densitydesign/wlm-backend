@@ -30,6 +30,7 @@ urlpatterns = [
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     path('django-rq/', include('django_rq.urls')),
     path('anycluster/', include('anycluster.api.urls')),
+    path('api/app/oauth/', include('oauth.urls')),
 
 ]
 
