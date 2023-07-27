@@ -64,10 +64,26 @@ class MonumentAppDetailSerialier(serializers.ModelSerializer):
             return PictureSerializer(picture).data
 
     def get_app_category(self, obj):
-        category = obj.categories.first()
+        category = obj.categories.all()
+        app_cat = None
         if category:
-            app_cat = category.app_category
-            return getattr(app_cat, "name", None)
+            if len(category) > 1:
+                for cat in category:
+                    if cat.app_category and cat.app_category.name != "Altri monumenti":
+                        app_cat = cat.app_category
+                        return getattr(app_cat, "name", None)
+                    else:
+                        continue
+                if app_cat == None:
+                    return "Altri monumenti"
+                        
+            else: 
+                category = category.first() 
+                app_cat = category.app_category
+                return getattr(app_cat, "name", None)
+        else:
+            return None
+
 
     def get_counts_comune_by_app_category(self, obj):
         category = obj.categories.first()
