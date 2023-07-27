@@ -1,7 +1,7 @@
 from django.shortcuts import render
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from authlib.integrations.django_client import OAuth
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 import requests
 import logging
 import sys
@@ -16,8 +16,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from drf_spectacular.utils import extend_schema
 from  authlib.integrations.requests_client import OAuth2Auth
+from django.conf import settings
+
 
 import jwt
+import urllib
 
 SECRET = "ze4QUGtDgDE7qTeo6tajY1MR1gMMp3YPu1A1dBf/5Mc="
 from datetime import datetime, timedelta, timezone
@@ -85,17 +88,17 @@ oauth = WLMOauth(update_token=update_token)
 params = {
     "client_id": "dea9920f4fcc0c8c5d5d8e0dfdc08f1d",
     "client_secret": "d35aa219a7b8b5683a0c9f8f764ee74951cdba3f",
-    "access_token_url": "http://wlm.inmagik.com:8080/rest.php/oauth2/access_token",
+    "access_token_url": settings.WIKIMEDIA_API_URL+"/rest.php/oauth2/access_token",
     "access_token_params": {
         "grant_type": "authorization_code",
     },
-    "authorize_url": "http://wlm.inmagik.com:8080/rest.php/oauth2/authorize",
+    "authorize_url": settings.WIKIMEDIA_API_URL+"/authorize",
     "authorize_params": {},
-    "refresh_token_url": None,
+    "refresh_token_url": settings.WIKIMEDIA_API_URL+"/access_token",
     "client_kwargs": {
         "code_challenge_method": "S256",
     },
-    "api_base_url": "http://wlm.inmagik.com:8080/rest.php/oauth2/resource/",
+    "api_base_url": settings.WIKIMEDIA_API_URL+"/resource/",
 }
 
 """
@@ -107,7 +110,8 @@ oauth.register(name="mediawiki", **params)
 
 def login(request):
     # build a full authorize callback uri
-    redirect_uri = request.build_absolute_uri(reverse("oauth_authorize"))
+    base_url = reverse_lazy("oauth_authorize")    
+    redirect_uri = request.build_absolute_uri(f"{base_url}")
     return oauth.mediawiki.authorize_redirect(request, redirect_uri)
 
     # print(o)
@@ -115,11 +119,8 @@ def login(request):
 
 def authorize(request):
     token = oauth.mediawiki.authorize_access_token(request)
-    resp = requests.get("http://wlm.inmagik.com:8080/rest.php/oauth2/resource/profile", headers={"Authorization": "Bearer " + token["access_token"]})
-    # resp = oauth.mediawiki.get("profile", token=token)
-    print(resp.text)
+    resp = requests.get(settings.WIKIMEDIA_API_URL+"/resource/profile", headers={"Authorization": "Bearer " + token["access_token"]})
     profile = resp.json()
-    # print(profile, token, 'token', resp)
     username = "mw--" + profile["username"]
 
     user = User.objects.filter(username=username).first()
@@ -139,7 +140,7 @@ def authorize(request):
 
     redeem_token = forge_access_jwt(username)
 
-    return HttpResponse(redeem_token)
+    return HttpResponseRedirect(f"http://localhost:5173/it/profilo?token={redeem_token}")
 
 
 class RedeemView(APIView):
@@ -186,7 +187,7 @@ class WMProfileView(APIView):
         token = OAuth2Token.objects.get(user=request.user, name="mediawiki")
         #resp = oauth.mediawiki.get("profile", token=token.to_token())
         auth = OAuth2Auth(token.to_token())
-        profile_url = "http://wlm.inmagik.com:8080/rest.php/oauth2/resource/profile"
+        profile_url = settings.WIKIMEDIA_API_URL+"/resource/profile"
         resp = requests.get(profile_url, auth=auth)
         profile = resp.json()
         return Response(profile)    

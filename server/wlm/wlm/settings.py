@@ -278,11 +278,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 #     },
 # }
 
-ANYCLUSTER_GEODJANGO_MODEL = "main.Monument"
-ANYCLUSTER_COORDINATES_COLUMN = "position"
-ANYCLUSTER_COORDINATES_COLUMN_SRID = 4326
-
-
+WIKIMEDIA_API_URL = "http://wlm.inmagik.com:8080/rest.php/oauth2"
 
 try:
     from .localsettings import *  # noqa
