@@ -113,8 +113,8 @@ def clusters_to_feature_collection(clusters):
 
 
 def get_eps_for_resolution(res):
-    if res > 10000:
-        x = 5000
+    if res > 3000:
+        x = 4500
     if res > 1000:
         x = 4000
     elif res > 500:

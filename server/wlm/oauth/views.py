@@ -88,7 +88,7 @@ oauth = WLMOauth(update_token=update_token)
 params = {
     "client_id": "dea9920f4fcc0c8c5d5d8e0dfdc08f1d",
     "client_secret": "d35aa219a7b8b5683a0c9f8f764ee74951cdba3f",
-    "access_token_url": settings.WIKIMEDIA_API_URL+"/rest.php/oauth2/access_token",
+    "access_token_url": settings.WIKIMEDIA_API_URL+"/access_token",
     "access_token_params": {
         "grant_type": "authorization_code",
     },
@@ -140,7 +140,7 @@ def authorize(request):
 
     redeem_token = forge_access_jwt(username)
 
-    return HttpResponseRedirect(f"http://localhost:5173/it/profilo?token={redeem_token}")
+    return HttpResponseRedirect(f"https://wlm.inmagik.com/it/profilo?token={redeem_token}")
 
 
 class RedeemView(APIView):

@@ -44,3 +44,5 @@ RQ_QUEUES = {
 }
 
 HTTP_CONDITIONAL_CACHE = True
+
+WIKIMEDIA_API_URL = "https://wlm.inmagik.com:8080/rest.php/oauth2"
