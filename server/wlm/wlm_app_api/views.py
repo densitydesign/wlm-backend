@@ -22,7 +22,7 @@ from .serializers import (
     ClusterSerializer, 
     MonumentAppDetailSerialier,
     MonumentAppListSerialier,
-    UploadImageSerializer
+    UploadImagesSerializer
 )
 
 
@@ -239,14 +239,14 @@ class ClusterMonumentsApi(APIView):
 class UploadImageView(APIView):
     permission_classes = (IsAuthenticated,)
     def post(self, request, *args, **kwargs):
-        ser = UploadImageSerializer(data=request.data, many=True)
+        ser = UploadImagesSerializer(data=request.data, many=True)
         ser.is_valid(raise_exception=True)
         print(ser.validated_data)
 
         user = request.user
         oauth_token = OAuth2Token.objects.get(user=user)
 
-        for uploaded_image in ser.validated_data:
+        for uploaded_image in ser.validated_data["images"]:
             title = uploaded_image["title"]
             image = uploaded_image["image"]
             description = uploaded_image["description"]

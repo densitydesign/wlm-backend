@@ -135,3 +135,7 @@ class UploadImageSerializer(serializers.Serializer):
     description = serializers.CharField(required=False)
     date = serializers.DateField()
     monument_id = serializers.CharField()
+
+
+class UploadImagesSerializer(serializers.Serializer):
+    images = UploadImageSerializer(many=True)
