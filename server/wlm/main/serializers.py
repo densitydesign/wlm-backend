@@ -1,7 +1,7 @@
 from asyncore import read
 from importlib.metadata import requires
 from rest_framework import serializers
-from main.models import Region, Province, Municipality, Monument, Picture, Category
+from main.models import Region, Province, Municipality, Monument, Picture, Category, MonumentImage
 from rest_framework_gis.serializers import GeometryField, GeoFeatureModelSerializer
 
 
@@ -88,9 +88,20 @@ class PictureSerializer(serializers.ModelSerializer):
         model = Picture
         fields = ["id", "image_id", "image_url", "image_date", "image_title", "wlm_image", "relevant_image"]
 
+class MonumentImageSerializer(serializers.ModelSerializer):
+    
+        image = serializers.SerializerMethodField()
+    
+        def get_image(self, obj):
+            return obj.image.image_url
+    
+        class Meta:
+            model = MonumentImage
+            fields = ["id", "image", "image_date", "image_title"]
 
 class MonumentSerializer(serializers.ModelSerializer):
     pictures = PictureSerializer(many=True, read_only=True)
+    # images_monument = MonumentImageSerializer(many=True, read_only=True)
     wlm_id = serializers.CharField(source="wlm_n")
     wlm_auth_start_date = serializers.DateTimeField(source="start")
     wlm_auth_end_date = serializers.DateTimeField(source="end")

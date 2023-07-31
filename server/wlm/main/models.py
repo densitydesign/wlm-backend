@@ -136,7 +136,7 @@ class Monument(models.Model):
     pictures_commons_count = models.IntegerField(blank=True, null=True)
     to_review = models.BooleanField(default=False)
 
-    in_contest = models.BooleanField(default=False, db_index=True)
+    in_contest = models.BooleanField(default=False)
     
     class Meta:
         index_together = [
@@ -148,6 +148,19 @@ class Monument(models.Model):
         return self.label
     
 
+class MonumentImage(models.Model):
+    monument = models.ForeignKey(Monument, models.CASCADE, related_name="images")
+    image_id = models.CharField(max_length=200, unique=True)
+    image_url = models.ImageField(upload_to='images')
+    image_date = models.DateTimeField(blank=True, null=True, db_index=True)
+    image_title = models.TextField(blank=True, default="")
+    image_type = models.CharField(max_length=20, db_index=True)
+    data = models.JSONField(default=dict)
+
+    class Meta:
+        index_together = [
+            ('monument', 'image_date'),
+        ]
 
 
 class Picture(models.Model):
@@ -167,6 +180,8 @@ class Picture(models.Model):
 
 class AppCategory(models.Model):
     name = models.CharField(max_length=200)
+    order = models.IntegerField(default=0)
+    priority = models.IntegerField(default=0)
 
     def __str__(self):
         return self.name

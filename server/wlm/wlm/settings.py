@@ -278,7 +278,12 @@ MEDIA_ROOT = BASE_DIR / "media"
 #     },
 # }
 
-WIKIMEDIA_API_URL = "https://wlm.inmagik.com:8080/rest.php/oauth2"
+URL_AUTH_API = "http://188.166.87.243:8080/rest.php/oauth2"
+URL_FRONTEND = "http://localhost:5173/it/"
+
+WIKIMEDIA_CLIENT_ID = "bc5f72672241aba79454db0aa6dc93c5"
+WIKIMEDIA_CLIENT_SECRET = "37fb4729f149b41505305eb518d818962fe47fed"
+
 
 try:
     from .localsettings import *  # noqa

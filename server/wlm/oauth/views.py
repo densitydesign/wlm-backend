@@ -86,19 +86,19 @@ oauth = WLMOauth(update_token=update_token)
 
 
 params = {
-    "client_id": "dea9920f4fcc0c8c5d5d8e0dfdc08f1d",
-    "client_secret": "d35aa219a7b8b5683a0c9f8f764ee74951cdba3f",
-    "access_token_url": settings.WIKIMEDIA_API_URL+"/access_token",
+    "client_id": settings.WIKIMEDIA_CLIENT_ID,
+    "client_secret": settings.WIKIMEDIA_CLIENT_SECRET,
+    "access_token_url": settings.URL_AUTH_API+"/access_token",
     "access_token_params": {
         "grant_type": "authorization_code",
     },
-    "authorize_url": settings.WIKIMEDIA_API_URL+"/authorize",
+    "authorize_url": settings.URL_AUTH_API+"/authorize",
     "authorize_params": {},
-    "refresh_token_url": settings.WIKIMEDIA_API_URL+"/access_token",
+    "refresh_token_url": settings.URL_AUTH_API+"/access_token",
     "client_kwargs": {
         "code_challenge_method": "S256",
     },
-    "api_base_url": settings.WIKIMEDIA_API_URL+"/resource/",
+    "api_base_url": settings.URL_AUTH_API+"/resource/",
 }
 
 """
@@ -119,7 +119,7 @@ def login(request):
 
 def authorize(request):
     token = oauth.mediawiki.authorize_access_token(request)
-    resp = requests.get(settings.WIKIMEDIA_API_URL+"/resource/profile", headers={"Authorization": "Bearer " + token["access_token"]})
+    resp = requests.get(settings.URL_AUTH_API+"/resource/profile", headers={"Authorization": "Bearer " + token["access_token"]})
     profile = resp.json()
     username = "mw--" + profile["username"]
 
@@ -140,7 +140,7 @@ def authorize(request):
 
     redeem_token = forge_access_jwt(username)
 
-    return HttpResponseRedirect(f"https://wlm.inmagik.com/it/profilo?token={redeem_token}")
+    return HttpResponseRedirect(f"{settings.URL_FRONTEND}profilo?token={redeem_token}")
 
 
 class RedeemView(APIView):
@@ -187,7 +187,7 @@ class WMProfileView(APIView):
         token = OAuth2Token.objects.get(user=request.user, name="mediawiki")
         #resp = oauth.mediawiki.get("profile", token=token.to_token())
         auth = OAuth2Auth(token.to_token())
-        profile_url = settings.WIKIMEDIA_API_URL+"/resource/profile"
+        profile_url = settings.URL_AUTH_API+"/resource/profile"
         resp = requests.get(profile_url, auth=auth)
         profile = resp.json()
         return Response(profile)    
