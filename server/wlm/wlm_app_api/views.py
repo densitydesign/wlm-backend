@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from django.contrib.gis.geos import Point
 from rest_framework.exceptions import APIException
 from django.db import models
-from .serializers import MonumentAppListSerialier, MonumentAppDetailSerialier, ClusterSerializer
+from .serializers import MonumentAppListSerialier, MonumentAppDetailSerialier, ClusterSerializer, UploadImageSerializer
 from main.models import Monument, Picture, AppCategory, Category, Municipality
 from rest_framework.pagination import PageNumberPagination
 from django_filters import rest_framework as filters
@@ -224,3 +224,12 @@ class ClusterMonumentsApi(APIView):
         return Response(out)
 
         
+class UploadImageView(APIView):
+    def post(self, request, *args, **kwargs):
+        ser = UploadImageSerializer(data=request.data, many=True)
+        ser.is_valid(raise_exception=True)
+        print(ser.validated_data)
+        for uploaded_image in ser.validated_data:
+            # TODO UPLOAD IMAGE TO wikimedia commons
+            pass
+        return Response(status=204)

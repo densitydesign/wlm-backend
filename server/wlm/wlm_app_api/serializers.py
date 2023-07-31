@@ -127,3 +127,11 @@ class ClusterGeoSerializer(serializers.Serializer):
     ids = serializers.ListField(child=serializers.IntegerField())
     cid = serializers.IntegerField()
 
+
+
+class UploadImageSerializer(serializers.Serializer):
+    image = serializers.ImageField()
+    title = serializers.CharField()
+    description = serializers.CharField(required=False)
+    date = serializers.DateField()
+    monument_id = serializers.CharField()
