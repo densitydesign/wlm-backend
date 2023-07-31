@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from .views import MonumentAppViewSet, ClusterMonumentsApi, CategoriesDomainApi
+from .views import MonumentAppViewSet, ClusterMonumentsApi, CategoriesDomainApi, UploadImageView
 
 router = DefaultRouter()
 router.register(r'monuments', MonumentAppViewSet, basename='monuments')
@@ -10,4 +10,5 @@ urlpatterns = router.urls
 urlpatterns += [
     path('cluster-monuments/', ClusterMonumentsApi.as_view(), name='cluster_monuments'),
     path('categories-domain/', CategoriesDomainApi.as_view(), name='categories_domain'),
+    path('upload-images/', UploadImageView.as_view(), name='upload_image'),
 ]

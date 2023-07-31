@@ -239,7 +239,7 @@ class ClusterMonumentsApi(APIView):
 class UploadImageView(APIView):
     permission_classes = (IsAuthenticated,)
     def post(self, request, *args, **kwargs):
-        ser = UploadImagesSerializer(data=request.data, many=True)
+        ser = UploadImagesSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         print(ser.validated_data)
 

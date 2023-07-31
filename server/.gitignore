@@ -134,3 +134,4 @@ media/
 # Dev data
 data/
 dockerdata/
+dumps/
