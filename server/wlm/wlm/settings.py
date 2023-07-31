@@ -277,14 +277,16 @@ MEDIA_ROOT = BASE_DIR / "media"
 #     },
 # }
 
-URL_AUTH_API = "http://188.166.87.243:8080/rest.php/oauth2"
+WIKIMEDIA_BASE_URL = "http://wlm.inmagik.com:8080"
+URL_ACTION_API = f"{WIKIMEDIA_BASE_URL}/api.php"
+URL_AUTH_API = f"{WIKIMEDIA_BASE_URL}/rest.php/oauth2"
 URL_FRONTEND = "http://localhost:5173/it/"
 
-WIKIMEDIA_CLIENT_ID = "bc5f72672241aba79454db0aa6dc93c5"
-WIKIMEDIA_CLIENT_SECRET = "37fb4729f149b41505305eb518d818962fe47fed"
+WIKIMEDIA_CLIENT_ID = "62c6d557e5a4fc319e30321d7504d02d" # "bc5f72672241aba79454db0aa6dc93c5"
+WIKIMEDIA_CLIENT_SECRET = "fed8821fff238d1eb0707f0d755ebf63467da214" # "37fb4729f149b41505305eb518d818962fe47fed"
 
 
 try:
-    from .localsettings import *  # noqa
+    from .localsettings import *  # type: ignore
 except ImportError:
     pass

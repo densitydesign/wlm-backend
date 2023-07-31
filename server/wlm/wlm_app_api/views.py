@@ -1,17 +1,27 @@
 import json
-from rest_framework import viewsets
-from rest_framework.views import APIView
-from django.contrib.gis.geos import Point
-from rest_framework.exceptions import APIException
-from django.db import models
-from .serializers import MonumentAppListSerialier, MonumentAppDetailSerialier, ClusterSerializer, UploadImageSerializer
-from main.models import Monument, Picture, AppCategory, Category, Municipality
-from rest_framework.pagination import PageNumberPagination
-from django_filters import rest_framework as filters
-from rest_framework.filters import SearchFilter, OrderingFilter
-from rest_framework.decorators import action
-from rest_framework.response import Response
+from pathlib import Path
+
+import requests
+from django.conf import settings
 from django.contrib.gis.db.models.functions import Distance
+from django.contrib.gis.geos import Point
+from django.db import models
+from django_filters import rest_framework as filters
+from main.models import AppCategory, Category, Monument, Municipality, Picture
+from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import APIException
+from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from .serializers import (
+    ClusterSerializer, 
+    MonumentAppDetailSerialier,
+    MonumentAppListSerialier,
+    UploadImageSerializer
+)
 
 
 class StandardResultsSetPagination(PageNumberPagination):
@@ -230,6 +240,35 @@ class UploadImageView(APIView):
         ser.is_valid(raise_exception=True)
         print(ser.validated_data)
         for uploaded_image in ser.validated_data:
-            # TODO UPLOAD IMAGE TO wikimedia commons
-            pass
+            title = uploaded_image["title"]
+            image = uploaded_image["image"]
+            description = uploaded_image["description"]
+            date = uploaded_image["date"]
+            monument = uploaded_image["monument_id"]
+            ext = Path(image.name).suffix
+            title = f"File:#{title}.#{ext}"
+            # TODO CHECK EXISTENCE
+            # GRAB CSRF TOKEN
+            csrf_res = requests.get(settings.URL_ACTION_API, params={ "action": "query", "meta": "tokens", "format": "json", "type": "csrf" })
+            csrf_res.raise_for_status()
+            csrf_token = csrf_res.json()["query"]["tokens"]["csrftoken"]
+            # TODO INJECT MONUMENT INFO
+            # TODO GENERATE TEXT
+            text = "Upload via WLM server"
+            # MAKE UPLOAD REQUEST
+            upload_res = requests.post(
+                settings.URL_ACTION_API,
+                data={
+                    "action": "upload",
+                    "filename": title,
+                    "text": text,
+                    "ignorewarnings": True,
+                    "format": "json",
+                    "token": csrf_token,
+                },
+                files={
+                    "file": image
+                }
+            )
+            print(upload_res.json())
         return Response(status=204)
