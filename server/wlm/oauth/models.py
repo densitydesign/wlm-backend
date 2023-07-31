@@ -6,8 +6,8 @@ User  = get_user_model()
 class OAuth2Token(models.Model):
     name = models.CharField(max_length=40)
     token_type = models.CharField(max_length=40)
-    access_token = models.TextField(max_length=500)
-    refresh_token = models.TextField(max_length=500)
+    access_token = models.TextField()
+    refresh_token = models.TextField()
     expires_at = models.PositiveIntegerField()
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 

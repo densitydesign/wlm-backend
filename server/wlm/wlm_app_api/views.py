@@ -18,6 +18,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 
 from oauth.models import OAuth2Token
+from oauth.views import oauth
 from .serializers import (
     ClusterSerializer, 
     MonumentAppDetailSerialier,
@@ -246,6 +247,8 @@ class UploadImageView(APIView):
         user = request.user
         oauth_token = OAuth2Token.objects.get(user=user)
 
+        all_results = []
+
         for uploaded_image in ser.validated_data["images"]:
             title = uploaded_image["title"]
             image = uploaded_image["image"]
@@ -253,17 +256,21 @@ class UploadImageView(APIView):
             date = uploaded_image["date"]
             monument = uploaded_image["monument_id"]
             ext = Path(image.name).suffix
-            title = f"File:#{title}.#{ext}"
+            title = f"File:{title}{ext}"
             # TODO CHECK EXISTENCE
             # GRAB CSRF TOKEN
-            csrf_res = requests.get(settings.URL_ACTION_API, params={ "action": "query", "meta": "tokens", "format": "json", "type": "csrf" })
+            csrf_res = oauth.mediawiki.get(
+                settings.URL_ACTION_API, 
+                params={ "action": "query", "meta": "tokens", "format": "json", "type": "csrf" }, 
+                token=oauth_token.to_token()
+            )
             csrf_res.raise_for_status()
             csrf_token = csrf_res.json()["query"]["tokens"]["csrftoken"]
             # TODO INJECT MONUMENT INFO
             # TODO GENERATE TEXT
             text = "Upload via WLM server"
             # MAKE UPLOAD REQUEST
-            upload_res = requests.post(
+            upload_res = oauth.mediawiki.post(
                 settings.URL_ACTION_API,
                 data={
                     "action": "upload",
@@ -278,7 +285,12 @@ class UploadImageView(APIView):
                 },
                 headers={
                     "Authorization": f"Bearer {oauth_token.access_token}"
-                }
+                }, 
+                token=oauth_token.to_token()
             )
-            print(upload_res.json())
-        return Response(status=204)
+            upload_res.raise_for_status()
+            upload_res_data = upload_res.json()
+            if "error" in upload_res_data:
+                return Response(upload_res_data, status=400)
+            all_results.append(upload_res_data)
+        return Response(status=200, data=all_results)

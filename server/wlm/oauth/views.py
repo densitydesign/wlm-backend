@@ -55,6 +55,9 @@ class WLMSession(OAuth2Session):
         out = super().request(method, url, withhold_token, auth, **kwargs)
         # print(out.text)
         return out
+    
+    def refresh_token(self, refresh_token=None, body='', auth=None, headers=None, **kwargs):
+        return super().refresh_token(params["refresh_token_url"], refresh_token, body, auth, headers, **kwargs)
 
 
 class WLMDjangoOAuth2App(DjangoOAuth2App):
@@ -66,6 +69,7 @@ class WLMOauth(OAuth):
 
 
 def update_token(name, token, refresh_token=None, access_token=None):
+    print("UPDATE TOKEN", name, token, refresh_token, access_token)
     if refresh_token:
         item = OAuth2Token.objects.get(name=name, refresh_token=refresh_token)
     elif access_token:
