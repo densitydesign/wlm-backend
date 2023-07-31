@@ -56,8 +56,6 @@ class WLMSession(OAuth2Session):
         # print(out.text)
         return out
     
-    def refresh_token(self, refresh_token=None, body='', auth=None, headers=None, **kwargs):
-        return super().refresh_token(params["refresh_token_url"], refresh_token, body, auth, headers, **kwargs)
 
 
 class WLMDjangoOAuth2App(DjangoOAuth2App):

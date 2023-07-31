@@ -25,7 +25,7 @@ from .serializers import (
     MonumentAppListSerialier,
     UploadImagesSerializer
 )
-
+from django.utils import timezone
 
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 100
@@ -246,6 +246,9 @@ class UploadImageView(APIView):
 
         user = request.user
         oauth_token = OAuth2Token.objects.get(user=user)
+        username = user.username[4:]
+
+        year = str(timezone.now().year)
 
         all_results = []
 
@@ -254,7 +257,9 @@ class UploadImageView(APIView):
             image = uploaded_image["image"]
             description = uploaded_image["description"]
             date = uploaded_image["date"]
-            monument = uploaded_image["monument_id"]
+            date_text = date.strftime("%Y-%m-%d")
+            monument_id = uploaded_image["monument_id"]
+            monument = Monument.objects.get(pk=monument_id)
             ext = Path(image.name).suffix
             title = f"File:{title}{ext}"
             # TODO CHECK EXISTENCE
@@ -266,9 +271,25 @@ class UploadImageView(APIView):
             )
             csrf_res.raise_for_status()
             csrf_token = csrf_res.json()["query"]["tokens"]["csrftoken"]
-            # TODO INJECT MONUMENT INFO
-            # TODO GENERATE TEXT
-            text = "Upload via WLM server"
+            # TODO COMPUTE CATEGORIES
+            wlm_categories = []
+            # GENERATE TEXT
+            text = "== {{int:filedesc}} ==\n"
+            text += "{{Information\n"
+            text += "|description={{it|1=%s}}{{Monumento italiano|%s}|anno=%s}}{{Load via app WLM.it|year=%s}}\n" % (description, str(monument.wlm_n), str(date.year), year )
+            text += "|date=%s\n" % (date_text, )
+            text += "|source={{own}}\n"
+            text += "|author=[[User:%s|%s]]\n" % (username, username, )
+            text += "}}\n"
+            text += "\n"
+            text += "== {{int:license-header}} ==\n"
+            text += "{{self|cc-by-sa-4.0}}\n"
+
+            if monument.in_contest:
+                text += "{{Wiki Loves Monuments %s|it}}" % (year, )
+
+            text += wlm_categories.join("\n")
+
             # MAKE UPLOAD REQUEST
             upload_res = oauth.mediawiki.post(
                 settings.URL_ACTION_API,
