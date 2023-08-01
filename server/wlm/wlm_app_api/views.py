@@ -1,13 +1,12 @@
 import json
 from pathlib import Path
 
-import requests
 from django.conf import settings
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
 from django.db import models
 from django_filters import rest_framework as filters
-from main.models import AppCategory, Category, Monument, Municipality, Picture
+from main.models import AppCategory, Monument
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
@@ -20,7 +19,6 @@ from rest_framework.permissions import IsAuthenticated
 from oauth.models import OAuth2Token
 from oauth.views import oauth
 from .serializers import (
-    ClusterSerializer, 
     MonumentAppDetailSerialier,
     MonumentAppListSerialier,
     UploadImagesSerializer
@@ -251,6 +249,7 @@ class UploadImageView(APIView):
         year = str(timezone.now().year)
 
         all_results = []
+        did_fail = False
 
         for uploaded_image in ser.validated_data["images"]:
             title = uploaded_image["title"]
@@ -312,6 +311,9 @@ class UploadImageView(APIView):
             upload_res.raise_for_status()
             upload_res_data = upload_res.json()
             if "error" in upload_res_data:
-                return Response(upload_res_data, status=400)
+                did_fail = True
             all_results.append(upload_res_data)
-        return Response(status=200, data=all_results)
+        if did_fail:
+            return Response(status=418, data=all_results)
+        else:
+            return Response(status=200, data=all_results)
