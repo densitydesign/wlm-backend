@@ -440,6 +440,8 @@ def update_monument(
     first_revision = get_revision(code)
 
     approved_by = monument_data.get("approvedBy_n", "")
+    article = monument_prop(monument_data, "article", "")
+    location = monument_prop(monument_data, "locationLabel", "")
     
 
     defaults = {
@@ -454,6 +456,8 @@ def update_monument(
         "parent_q_number":parent_q_number,
         "relevant_images":relevant_images,
         "approved_by":approved_by,
+        "article":article,
+        "location":location,
     }
 
     if not skip_geo and position is not None:

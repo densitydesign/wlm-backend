@@ -1,5 +1,7 @@
 SELECT DISTINCT
   ?mon ?monLabel
+  ?location ?locationLabel
+  ?article
   
   (group_concat(DISTINCT ?parent; separator=";") as ?parent_n)
   (group_concat(DISTINCT ?geo; separator=";") as ?geo_n)
@@ -43,7 +45,12 @@ WHERE {
   }
   OPTIONAL { ?mon wdt:P18 ?relevantImage . }
   OPTIONAL { ?mon wdt:P373 ?commonsCat . }
+  OPTIONAL { ?mon wdt:P276 ?location . }
+  OPTIONAL {
+    ?article schema:about ?mon.
+    FILTER REGEX(STR(?article), ".wikipedia.org/wiki/") .
+  }
 }
 
-GROUP BY ?mon ?monLabel
+GROUP BY ?mon ?monLabel ?location ?locationLabel ?article
 ORDER BY ?monLabel
