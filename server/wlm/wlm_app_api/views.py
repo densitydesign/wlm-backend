@@ -322,7 +322,11 @@ class UploadImageView(APIView):
                     image_date=timezone.now(),
                     image_title=title,
                     image_type="wlm",
-                    data={"title": title}
+                    data={
+                        "title": title, 
+                        "Artist": f"<a href=\"{settings.WIKIMEDIA_BASE_URL}/wiki/User:{username}\" title=\"User:{username}\">{username}</a>", 
+                        "ImageDescription": description, 
+                        "License": "cc-by-sa-4.0"}
                 )
             all_results.append(upload_res_data)
         monument.pictures_wlm_count = Picture.objects.filter(monument=monument, image_type="wlm").count()
