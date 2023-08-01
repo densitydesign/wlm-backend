@@ -361,9 +361,17 @@ class UploadImageView(APIView):
                     image_date=timezone.now(),
                     image_title=title,
                     image_type="wlm",
-                    data={"title": title}
+                    data={
+                        "title": title, 
+                        "Artist": f"<a href=\"{settings.WIKIMEDIA_BASE_URL}/wiki/User:{username}\" title=\"User:{username}\">{username}</a>", 
+                        "ImageDescription": description, 
+                        "License": "cc-by-sa-4.0",
+                        "source": "user-upload"
+                    }
                 )
             all_results.append(upload_res_data)
+        monument.pictures_wlm_count = Picture.objects.filter(monument=monument, image_type="wlm").count()
+        monument.save()
         if did_fail:
             return Response(status=418, data=all_results)
         else:
@@ -380,12 +388,14 @@ class PersonalContributionsView(APIView):
                     "format": "json",
                     "prop": "imageinfo",
                     "generator": "allimages",
-                    "gaiuser": "", # TODO
+                    "gaiuser": request.user.username[4:],
                     "gaisort": "timestamp",
-                    "gailimt": "15"
+                    "gailimit": "15",
+                    "iiprop": "timestamp|user|url",
                 },
             )
         response.raise_for_status()
         data = response.json()
+        print(data)
         images = list(data["query"]["pages"].values())
         return Response(images)
