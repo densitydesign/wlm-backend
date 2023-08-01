@@ -6,7 +6,7 @@ from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
 from django.db import models
 from django_filters import rest_framework as filters
-from main.models import AppCategory, Monument
+from main.models import AppCategory, Monument, Picture
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
@@ -24,6 +24,7 @@ from .serializers import (
     UploadImagesSerializer
 )
 from django.utils import timezone
+from uuid import uuid4
 
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 100
@@ -287,7 +288,7 @@ class UploadImageView(APIView):
             if monument.in_contest:
                 text += "{{Wiki Loves Monuments %s|it}}" % (year, )
 
-            text += wlm_categories.join("\n")
+            text += "\n".join(wlm_categories)
 
             # MAKE UPLOAD REQUEST
             upload_res = oauth.mediawiki.post(
@@ -312,6 +313,16 @@ class UploadImageView(APIView):
             upload_res_data = upload_res.json()
             if "error" in upload_res_data:
                 did_fail = True
+            else:
+                Picture.objects.create(
+                    monument=monument,
+                    image_id=str(uuid4()), # la upload response non ritorna l'ID pagina, mettiamo un id casuale per il vincolo di unicità del DB, a meno di problemi
+                    image_url=upload_res_data["upload"]["imageinfo"]["url"],
+                    image_date=timezone.now(),
+                    image_title=title,
+                    image_type="wlm",
+                    data={"title": title}
+                )
             all_results.append(upload_res_data)
         if did_fail:
             return Response(status=418, data=all_results)
