@@ -144,9 +144,12 @@ def qs_to_featurecollection(qs):
         "features": []
     }
     for row in qs:
+        
         if row["position"]:
             geom = json.loads(row["position"])
         else:
+            print(row)
+            continue
             geom = None
 
         out["features"].append(
@@ -178,6 +181,7 @@ class CategoriesDomainApi(APIView):
         return Response(data)
 
 class ClusterMonumentsApi(APIView):
+    #todo: cache
     def get(self, request):
         """
                 
@@ -192,22 +196,34 @@ class ClusterMonumentsApi(APIView):
         bbox_condition = f"WHERE position && ST_MakeEnvelope({bbox[0]}, {bbox[1]}, {bbox[2]}, {bbox[3]}, 4326)"
 
         resolution = request.query_params.get("resolution", None)
-        print(resolution)
+        #print(resolution)
         if not resolution:
             raise APIException("resolution is required")
         
 
-        # if float(resolution) > 700:
-        #     # grouping by region
-        #     qs = Monument.objects.all().select_related("region").values(
-        #         "region__name", "region__pk"
-        #     ).annotate(
-        #         ids=models.Count("id"),
-        #         position=models.functions.AsGeoJSON(models.functions.Transform("region__centroid", 3857)),
-        #     ).values(
-        #         "ids", "position"
-        #     )
-        #     return Response(qs_to_featurecollection(qs))
+        if float(resolution) > 1000:
+            # grouping by region
+            qs = Monument.objects.filter(position__isnull=False).select_related("region").values(
+                "region__name", "region__pk"
+            ).annotate(
+                ids=models.Count("id"),
+                position=models.functions.AsGeoJSON(models.functions.Transform("region__centroid", 3857)),
+            ).values(
+                "ids", "position", "region__name"
+            )
+            return Response(qs_to_featurecollection(qs))
+        
+        if float(resolution) > 300:
+            # grouping by province
+            qs = Monument.objects.filter(position__isnull=False).select_related("provice").values(
+                "province__name", "province__pk"
+            ).annotate(
+                ids=models.Count("id"),
+                position=models.functions.AsGeoJSON(models.functions.Transform("province__centroid", 3857)),
+            ).values(
+                "ids", "position", "province__name"
+            )
+            return Response(qs_to_featurecollection(qs))
 
     
         eps = get_eps_for_resolution(float(resolution))

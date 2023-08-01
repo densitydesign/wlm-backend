@@ -1,7 +1,7 @@
 SELECT DISTINCT
 
   ?mon ?monLabel
-  ?location ?locationLabel
+  ?locationLabel
   ?article
 
   (group_concat(DISTINCT ?parent; separator=";") as ?parent_n)
@@ -50,11 +50,11 @@ WHERE {
   OPTIONAL { ?mon wdt:P276 ?location . }
   OPTIONAL {
     ?article schema:about ?mon.
-    FILTER REGEX(STR(?article), ".wikipedia.org/wiki/") .
+    FILTER REGEX(STR(?article), ".it.wikipedia.org/wiki/") .
   }
   
 
 }
 
-GROUP BY ?mon ?monLabel ?location ?locationLabel ?article
+GROUP BY ?mon ?monLabel ?locationLabel ?article
 ORDER BY ?monLabel
