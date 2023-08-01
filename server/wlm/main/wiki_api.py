@@ -44,7 +44,7 @@ def get_query_template_typologies():
 
 
 def execute_query(query):
-    r = requests.get(SPARQL_URL, params={"format": "json", "query": query}, timeout=200)
+    r = requests.get(SPARQL_URL, params={"format": "json", "query": query}, timeout=400)
     
     try:
         return r.json()

@@ -5,7 +5,7 @@ import requests
 from django.conf import settings
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
-from django.db import models
+from django.contrib.gis.db import models
 from django_filters import rest_framework as filters
 from main.models import AppCategory, Monument, Picture
 from rest_framework import viewsets
@@ -138,6 +138,30 @@ def get_eps_for_resolution(res):
     return out
 
 
+def qs_to_featurecollection(qs):
+    out = {
+        "type": "FeatureCollection",
+        "features": []
+    }
+    for row in qs:
+        if row["position"]:
+            geom = json.loads(row["position"])
+        else:
+            geom = None
+
+        out["features"].append(
+            {
+                "type": "Feature",
+                "geometry": geom,
+                "properties": {
+                    "ids": row["ids"],
+                    #"name": row["name"]
+                }
+            }
+        )
+    return out
+
+
 class CategoriesDomainApi(APIView):
     def get(self, request):
         """
@@ -168,8 +192,23 @@ class ClusterMonumentsApi(APIView):
         bbox_condition = f"WHERE position && ST_MakeEnvelope({bbox[0]}, {bbox[1]}, {bbox[2]}, {bbox[3]}, 4326)"
 
         resolution = request.query_params.get("resolution", None)
+        print(resolution)
         if not resolution:
             raise APIException("resolution is required")
+        
+
+        # if float(resolution) > 700:
+        #     # grouping by region
+        #     qs = Monument.objects.all().select_related("region").values(
+        #         "region__name", "region__pk"
+        #     ).annotate(
+        #         ids=models.Count("id"),
+        #         position=models.functions.AsGeoJSON(models.functions.Transform("region__centroid", 3857)),
+        #     ).values(
+        #         "ids", "position"
+        #     )
+        #     return Response(qs_to_featurecollection(qs))
+
     
         eps = get_eps_for_resolution(float(resolution))
 
