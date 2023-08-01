@@ -325,6 +325,8 @@ class UploadImageView(APIView):
                     data={"title": title}
                 )
             all_results.append(upload_res_data)
+        monument.pictures_wlm_count = Picture.objects.filter(monument=monument, image_type="wlm").count()
+        monument.save()
         if did_fail:
             return Response(status=418, data=all_results)
         else:
@@ -341,12 +343,14 @@ class PersonalContributionsView(APIView):
                     "format": "json",
                     "prop": "imageinfo",
                     "generator": "allimages",
-                    "gaiuser": "", # TODO
+                    "gaiuser": request.user.username[4:],
                     "gaisort": "timestamp",
-                    "gailimt": "15"
+                    "gailimit": "15",
+                    "iiprop": "timestamp|user|url",
                 },
             )
         response.raise_for_status()
         data = response.json()
+        print(data)
         images = list(data["query"]["pages"].values())
         return Response(images)
