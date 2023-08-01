@@ -143,7 +143,9 @@ class MonumentSerializer(serializers.ModelSerializer):
             "pictures_count",
             "pictures_wlm_count",
             "pictures_commons_count",
-            "to_review"
+            "to_review",
+            "article",
+            "location",
         ]
 
 

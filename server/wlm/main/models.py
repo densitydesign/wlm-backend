@@ -137,6 +137,9 @@ class Monument(models.Model):
     to_review = models.BooleanField(default=False)
 
     in_contest = models.BooleanField(default=False)
+
+    article = models.CharField(max_length=500, blank=True, default='')
+    location = models.CharField(max_length=500, blank=True, default='')
     
     class Meta:
         index_together = [
