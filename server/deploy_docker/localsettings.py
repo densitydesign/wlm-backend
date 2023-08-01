@@ -45,8 +45,8 @@ RQ_QUEUES = {
 
 HTTP_CONDITIONAL_CACHE = True
 
-URL_AUTH_API = "http://wlm.inmagik.com:8080/rest.php/oauth2"
+URL_AUTH_API = "https://wikitest.inmagik.com/rest.php/oauth2"
 URL_FRONTEND = "https://wlm.inmagik.com/it/"
 
-WIKIMEDIA_CLIENT_ID = "b5b68ee3e6e6c301b6536505b245541e"
-WIKIMEDIA_CLIENT_SECRET = "4c8bf075e52b543a445368860b7524b6bfe85938"
+WIKIMEDIA_CLIENT_ID = "489c77f3ecb36e32ddf3dd38480f4a11"
+WIKIMEDIA_CLIENT_SECRET = "effecd42c68913cec22a3a6c0fa32cc4ef9f8bb6"
