@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import requests
 
 from django.conf import settings
 from django.contrib.gis.db.models.functions import Distance
@@ -328,3 +329,24 @@ class UploadImageView(APIView):
             return Response(status=418, data=all_results)
         else:
             return Response(status=200, data=all_results)
+        
+
+class PersonalContributionsView(APIView):
+    permission_classes = (IsAuthenticated,)
+    def get(self, request, *args, **kwargs):
+        response = requests.post(
+                settings.URL_ACTION_API,
+                data={
+                    "action": "query",
+                    "format": "json",
+                    "prop": "imageinfo",
+                    "generator": "allimages",
+                    "gaiuser": "", # TODO
+                    "gaisort": "timestamp",
+                    "gailimt": "15"
+                },
+            )
+        response.raise_for_status()
+        data = response.json()
+        images = list(data["query"]["pages"].values())
+        return Response(images)
