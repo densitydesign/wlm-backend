@@ -55,7 +55,7 @@ class MonumentAppDetailSerialier(serializers.ModelSerializer):
     distance = serializers.FloatField(read_only=True, required=False)
 
     def get_pictures(self, obj):
-        pictures = obj.pictures.filter(image_type="wlm")
+        pictures = obj.pictures.filter()
         return PictureSerializer(pictures, many=True).data
     
     def get_cover_picture(self, obj):
