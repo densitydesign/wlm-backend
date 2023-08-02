@@ -348,7 +348,7 @@ class UploadImageView(APIView):
             # GENERATE TEXT
             text = "== {{int:filedesc}} ==\n"
             text += "{{Information\n"
-            text += "|description={{it|1=%s}}{{Monumento italiano|%s}|anno=%s}}{{Load via app WLM.it|year=%s}}\n" % (description, str(monument.wlm_n), str(date.year), year )
+            text += "|description={{it|1=%s}}{{Monumento italiano|%s|anno=%s}}{{Load via app WLM.it|year=%s}}\n" % (description, str(monument.wlm_n), str(date.year), year )
             text += "|date=%s\n" % (date_text, )
             text += "|source={{own}}\n"
             text += "|author=[[User:%s|%s]]\n" % (username, username, )
