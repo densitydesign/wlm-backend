@@ -333,8 +333,7 @@ class UploadImageView(APIView):
     def post(self, request, *args, **kwargs):
         ser = UploadImagesSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
-        print(ser.validated_data)
-
+        
         user = request.user
         oauth_token = OAuth2Token.objects.get(user=user)
         username = user.username[4:]
@@ -442,6 +441,8 @@ class UploadImageView(APIView):
                 did_fail = True
                 all_results.append({"error": upload_res.status_code, "message": upload_res.text})
         monument.pictures_wlm_count = Picture.objects.filter(monument=monument, image_type="wlm").count()
+        monument.pictures_count = Picture.objects.filter(monument=monument).count()
+
         monument.save()
         if did_fail:
             return Response(status=418, data=all_results)
