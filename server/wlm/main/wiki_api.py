@@ -43,12 +43,18 @@ def get_query_template_typologies():
     return QUERY_TEMPLATE
 
 
-def execute_query(query):
+def execute_query(query, limit=None, offset=None):
+    if limit:
+        query = query + f" LIMIT {limit}"
+    if offset:
+        query = query + f" OFFSET {offset}"
+
     r = requests.get(SPARQL_URL, params={"format": "json", "query": query}, timeout=400)
     
     try:
         return r.json()
     except Exception as e:
+        print(r.text)
         raise e
 
 
