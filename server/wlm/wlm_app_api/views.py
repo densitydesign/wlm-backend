@@ -26,6 +26,7 @@ from .serializers import (
 )
 from django.utils import timezone
 from uuid import uuid4
+from urllib.parse import urlparse, parse_qs
 
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 100
@@ -308,6 +309,7 @@ class UploadImageView(APIView):
         all_results = []
         did_fail = False
 
+
         for uploaded_image in ser.validated_data["images"]:
             title = uploaded_image["title"]
             image = uploaded_image["image"]
@@ -327,8 +329,22 @@ class UploadImageView(APIView):
             )
             csrf_res.raise_for_status()
             csrf_token = csrf_res.json()["query"]["tokens"]["csrftoken"]
-            # TODO COMPUTE CATEGORIES
+            # COMPUTE CATEGORIES
+            monument_meta_ferdi_res = requests.get("https://cerca.wikilovesmonuments.it/show_by_wikidata.json", params={"item": monument.q_number})
             wlm_categories = []
+            non_wlm_categories = []
+            if monument_meta_ferdi_res.ok:
+                monument_meta_ferdi = monument_meta_ferdi_res.json()
+                uploadurl_wlm = monument_meta_ferdi.get("uploadurl", "")
+                uploadurl_nonwlm = monument_meta_ferdi.get("nonwlmuploadurl", "")
+                if uploadurl_wlm and "categories=" in uploadurl_wlm:
+                    parts = urlparse(uploadurl_wlm)
+                    queryparams = parse_qs(parts.query)
+                    wlm_categories = [f"[[Category:{cat}]]" for cat in queryparams["categories"][0].split("|")]
+                if uploadurl_nonwlm and "categories=" in uploadurl_nonwlm:
+                    parts = urlparse(uploadurl_wlm)
+                    queryparams = parse_qs(parts.query)
+                    non_wlm_categories = [f"[[Category:{cat}]]" for cat in queryparams["categories"][0].split("|")]
             # GENERATE TEXT
             text = "== {{int:filedesc}} ==\n"
             text += "{{Information\n"
@@ -343,8 +359,9 @@ class UploadImageView(APIView):
 
             if monument.in_contest:
                 text += "{{Wiki Loves Monuments %s|it}}" % (year, )
-
-            text += "\n".join(wlm_categories)
+                text += "\n".join(wlm_categories)
+            else:
+                text += "\n".join(non_wlm_categories)
 
             # MAKE UPLOAD REQUEST
             upload_res = oauth.mediawiki.post(
@@ -365,27 +382,30 @@ class UploadImageView(APIView):
                 }, 
                 token=oauth_token.to_token()
             )
-            upload_res.raise_for_status()
-            upload_res_data = upload_res.json()
-            if "error" in upload_res_data:
-                did_fail = True
+            if upload_res.ok:
+                upload_res_data = upload_res.json()
+                if "error" in upload_res_data:
+                    did_fail = True
+                else:
+                    Picture.objects.create(
+                        monument=monument,
+                        image_id=str(uuid4()), # la upload response non ritorna l'ID pagina, mettiamo un id casuale per il vincolo di unicità del DB, a meno di problemi
+                        image_url=upload_res_data["upload"]["imageinfo"]["url"],
+                        image_date=timezone.now(),
+                        image_title=title,
+                        image_type="wlm",
+                        data={
+                            "title": title, 
+                            "Artist": f"<a href=\"{settings.WIKIMEDIA_BASE_URL}/wiki/User:{username}\" title=\"User:{username}\">{username}</a>", 
+                            "ImageDescription": description, 
+                            "License": "cc-by-sa-4.0",
+                            "source": "user-upload"
+                        }
+                    )
+                all_results.append(upload_res_data)
             else:
-                Picture.objects.create(
-                    monument=monument,
-                    image_id=str(uuid4()), # la upload response non ritorna l'ID pagina, mettiamo un id casuale per il vincolo di unicità del DB, a meno di problemi
-                    image_url=upload_res_data["upload"]["imageinfo"]["url"],
-                    image_date=timezone.now(),
-                    image_title=title,
-                    image_type="wlm",
-                    data={
-                        "title": title, 
-                        "Artist": f"<a href=\"{settings.WIKIMEDIA_BASE_URL}/wiki/User:{username}\" title=\"User:{username}\">{username}</a>", 
-                        "ImageDescription": description, 
-                        "License": "cc-by-sa-4.0",
-                        "source": "user-upload"
-                    }
-                )
-            all_results.append(upload_res_data)
+                did_fail = True
+                all_results.append({"error": upload_res.status_code, "message": upload_res.text})
         monument.pictures_wlm_count = Picture.objects.filter(monument=monument, image_type="wlm").count()
         monument.save()
         if did_fail:
