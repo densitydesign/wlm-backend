@@ -142,7 +142,7 @@ def authorize(request):
 
     redeem_token = forge_access_jwt(username)
 
-    return HttpResponseRedirect(f"{settings.URL_FRONTEND}profilo?token={redeem_token}")
+    return HttpResponseRedirect(f"{settings.URL_FRONTEND}redirect-login?token={redeem_token}")
 
 
 class RedeemView(APIView):
