@@ -368,7 +368,7 @@ class UploadImageView(APIView):
             monument_meta_ferdi_res = requests.get("https://cerca.wikilovesmonuments.it/show_by_wikidata.json", params={"item": monument.q_number})
             wlm_categories = []
             non_wlm_categories = []
-            if monument_meta_ferdi_res.ok:
+            if monument_meta_ferdi_res.ok and monument_meta_ferdi_res.text != 'null':
                 monument_meta_ferdi = monument_meta_ferdi_res.json()
                 uploadurl_wlm = monument_meta_ferdi.get("uploadurl", "")
                 uploadurl_nonwlm = monument_meta_ferdi.get("nonwlmuploadurl", "")
