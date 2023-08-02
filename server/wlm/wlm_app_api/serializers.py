@@ -55,7 +55,7 @@ class MonumentAppDetailSerialier(serializers.ModelSerializer):
     distance = serializers.FloatField(read_only=True, required=False)
 
     def get_pictures(self, obj):
-        pictures = obj.pictures.filter()
+        pictures = obj.pictures.all().order_by('-image_date')
         return PictureSerializer(pictures, many=True).data
     
     def get_cover_picture(self, obj):
