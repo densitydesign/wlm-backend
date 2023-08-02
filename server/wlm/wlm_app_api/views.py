@@ -200,24 +200,63 @@ class ClusterMonumentsApi(APIView):
         if not resolution:
             raise APIException("resolution is required")
         
+        municipality = request.query_params.get("municipality", None)
+        only_without_pictures = request.query_params.get("only_without_pictures", None)
+        in_contest = request.query_params.get("in_contest", None)
+        category = request.query_params.get("category", None)
 
         if float(resolution) > 1000:
             # grouping by region
             qs = Monument.objects.filter(position__isnull=False).select_related("region").values(
                 "region__name", "region__pk"
-            ).annotate(
+            )
+
+            if municipality:
+                qs = qs.filter(municipality_id=municipality)
+            if only_without_pictures:
+                qs = qs.filter(pictures_wlm_count=0)
+            if in_contest:
+                qs = qs.filter(in_contest=True)
+            if category:
+                app_category = AppCategory.objects.get(name__iexact=category)
+                if not app_category:
+                    raise APIException("Invalid category")
+                categories_pks = app_category.categories.values_list("pk", flat=True)
+                qs = qs.filter(categories__pk__in=categories_pks)
+            
+            
+            
+            qs = qs.annotate(
                 ids=models.Count("id"),
                 position=models.functions.AsGeoJSON(models.functions.Transform("region__centroid", 3857)),
             ).values(
                 "ids", "position", "region__name"
             )
+
+            
             return Response(qs_to_featurecollection(qs))
         
         if float(resolution) > 300:
             # grouping by province
-            qs = Monument.objects.filter(position__isnull=False).select_related("provice").values(
+            qs = Monument.objects.filter(position__isnull=False).select_related("province").values(
                 "province__name", "province__pk"
-            ).annotate(
+            )
+
+            if municipality:
+                qs = qs.filter(municipality_id=municipality)
+            if only_without_pictures:
+                qs = qs.filter(pictures_wlm_count=0)
+            if in_contest:
+                qs = qs.filter(in_contest=True)
+            if category:
+                app_category = AppCategory.objects.get(name__iexact=category)
+                if not app_category:
+                    raise APIException("Invalid category")
+                categories_pks = app_category.categories.values_list("pk", flat=True)
+                qs = qs.filter(categories__pk__in=categories_pks)
+            
+            
+            qs = qs.annotate(
                 ids=models.Count("id"),
                 position=models.functions.AsGeoJSON(models.functions.Transform("province__centroid", 3857)),
             ).values(
@@ -228,11 +267,7 @@ class ClusterMonumentsApi(APIView):
     
         eps = get_eps_for_resolution(float(resolution))
 
-        municipality = request.query_params.get("municipality", None)
-        only_without_pictures = request.query_params.get("only_without_pictures", None)
-        in_contest = request.query_params.get("in_contest", None)
-        category = request.query_params.get("category", None)
-
+        
 
         filter_condition = ""
         if municipality:
