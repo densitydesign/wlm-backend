@@ -27,6 +27,7 @@ from .serializers import (
 from django.utils import timezone
 from uuid import uuid4
 from urllib.parse import urlparse, parse_qs
+from .helpers import get_upload_categories
 
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 100
@@ -93,6 +94,11 @@ class MonumentAppViewSet(viewsets.ReadOnlyModelViewSet):
         if self.action == "retrieve":
             return MonumentAppDetailSerialier
         return super().get_serializer_class()
+    
+    @action(detail=True, methods=["get"], url_path="upload-categories")
+    def upload_categories(self, request, pk=None):
+        monument = self.get_object()
+        return Response(get_upload_categories(monument.q_number))
 
 
 def dictfetchall(cursor):
@@ -364,21 +370,23 @@ class UploadImageView(APIView):
             csrf_res.raise_for_status()
             csrf_token = csrf_res.json()["query"]["tokens"]["csrftoken"]
             # COMPUTE CATEGORIES
-            monument_meta_ferdi_res = requests.get("https://cerca.wikilovesmonuments.it/show_by_wikidata.json", params={"item": monument.q_number})
             wlm_categories = []
             non_wlm_categories = []
-            if monument_meta_ferdi_res.ok and monument_meta_ferdi_res.text != 'null':
-                monument_meta_ferdi = monument_meta_ferdi_res.json()
-                uploadurl_wlm = monument_meta_ferdi.get("uploadurl", "")
-                uploadurl_nonwlm = monument_meta_ferdi.get("nonwlmuploadurl", "")
-                if uploadurl_wlm and "categories=" in uploadurl_wlm:
-                    parts = urlparse(uploadurl_wlm)
-                    queryparams = parse_qs(parts.query)
-                    wlm_categories = [f"[[Category:{cat}]]" for cat in queryparams["categories"][0].split("|")]
-                if uploadurl_nonwlm and "categories=" in uploadurl_nonwlm:
-                    parts = urlparse(uploadurl_wlm)
-                    queryparams = parse_qs(parts.query)
-                    non_wlm_categories = [f"[[Category:{cat}]]" for cat in queryparams["categories"][0].split("|")]
+            try:
+                urls = get_upload_categories(monument.q_number)
+            except Exception as e:
+                urls = {}
+                
+            uploadurl_wlm = urls.get("uploadurl", "")
+            uploadurl_nonwlm = urls.get("nonwlmuploadurl", "")
+            if uploadurl_wlm and "categories=" in uploadurl_wlm:
+                parts = urlparse(uploadurl_wlm)
+                queryparams = parse_qs(parts.query)
+                wlm_categories = [f"[[Category:{cat}]]" for cat in queryparams["categories"][0].split("|")]
+            if uploadurl_nonwlm and "categories=" in uploadurl_nonwlm:
+                parts = urlparse(uploadurl_wlm)
+                queryparams = parse_qs(parts.query)
+                non_wlm_categories = [f"[[Category:{cat}]]" for cat in queryparams["categories"][0].split("|")]
             # GENERATE TEXT
             text = "== {{int:filedesc}} ==\n"
             text += "{{Information\n"

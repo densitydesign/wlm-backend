@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "debug_toolbar",
     "authlib",  # for oauth2
     "oauth",  # for oauth2
+    "wlm_app_api",
 ]
 
 MIDDLEWARE = [
