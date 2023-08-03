@@ -50,13 +50,13 @@ class MonumentFilter(filters.FilterSet):
 
     def filter_only_without_pictures(self, queryset, name, value):
         if value:
-            return queryset.filter(pictures_wlm_count=0)
+            return queryset.filter(pictures_count=0)
         else:
             return queryset
 
     class Meta:
         model = Monument
-        fields = ["municipality", "pictures_wlm_count", "in_contest"]
+        fields = ["municipality", "pictures_count", "in_contest"]
 
 
 class MonumentAppViewSet(viewsets.ReadOnlyModelViewSet):
@@ -70,7 +70,7 @@ class MonumentAppViewSet(viewsets.ReadOnlyModelViewSet):
         OrderingFilter,
         SearchFilter,
     ]
-    ordering_fields = ["label", "pictures_wlm_count"]
+    ordering_fields = ["label", "pictures_count"]
     search_fields = ["label", "municipality__name"]
     filterset_class = MonumentFilter
 
@@ -221,7 +221,7 @@ class ClusterMonumentsApi(APIView):
             if municipality:
                 qs = qs.filter(municipality_id=municipality)
             if only_without_pictures:
-                qs = qs.filter(pictures_wlm_count=0)
+                qs = qs.filter(pictures_count=0)
             if in_contest:
                 qs = qs.filter(in_contest=True)
             if category:
@@ -252,7 +252,7 @@ class ClusterMonumentsApi(APIView):
             if municipality:
                 qs = qs.filter(municipality_id=municipality)
             if only_without_pictures:
-                qs = qs.filter(pictures_wlm_count=0)
+                qs = qs.filter(pictures_count=0)
             if in_contest:
                 qs = qs.filter(in_contest=True)
             if category:
@@ -280,7 +280,7 @@ class ClusterMonumentsApi(APIView):
         if municipality:
             filter_condition += f" AND main_monument.municipality_id = {municipality}"
         if only_without_pictures:
-            filter_condition += f" AND (pictures_wlm_count = 0 OR pictures_wlm_count IS NULL)"
+            filter_condition += f" AND (pictures_count = 0 OR pictures_count IS NULL)"
         if in_contest:
             filter_condition += f" AND in_contest = True"
         if category:
@@ -320,6 +320,7 @@ class ClusterMonumentsApi(APIView):
                     'label', label, 
                     'in_contest', in_contest, 
                     'position', position,
+                    'pictures_count', pictures_count,
                     'pictures_wlm_count', pictures_wlm_count) as properties 
                 FROM main_monument JOIN main_monument_categories ON main_monument.id = main_monument_categories.monument_id
                 {bbox_condition}
