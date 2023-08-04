@@ -86,7 +86,7 @@ class PictureSerializer(serializers.ModelSerializer):
         return obj.image_type == "commons"
     class Meta:
         model = Picture
-        fields = ["id", "image_id", "image_url", "image_date", "image_title", "wlm_image", "relevant_image"]
+        fields = ["id", "image_id", "image_url", "image_date", "image_title", "wlm_image", "relevant_image", "data"]
 
 class MonumentImageSerializer(serializers.ModelSerializer):
     
