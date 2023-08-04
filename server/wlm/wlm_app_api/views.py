@@ -1,13 +1,13 @@
 import json
 from pathlib import Path
 import requests
-
+from django.core.cache import cache
 from django.conf import settings
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db import models
 from django_filters import rest_framework as filters
-from main.models import AppCategory, Monument, Picture
+from main.models import AppCategory, Monument, Picture, Snapshot
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
@@ -19,15 +19,12 @@ from rest_framework.permissions import IsAuthenticated
 
 from oauth.models import OAuth2Token
 from oauth.views import oauth
-from .serializers import (
-    MonumentAppDetailSerialier,
-    MonumentAppListSerialier,
-    UploadImagesSerializer
-)
+from .serializers import MonumentAppDetailSerialier, MonumentAppListSerialier, UploadImagesSerializer
 from django.utils import timezone
 from uuid import uuid4
 from urllib.parse import urlparse, parse_qs
 from .helpers import get_upload_categories
+
 
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 100
@@ -94,7 +91,7 @@ class MonumentAppViewSet(viewsets.ReadOnlyModelViewSet):
         if self.action == "retrieve":
             return MonumentAppDetailSerialier
         return super().get_serializer_class()
-    
+
     @action(detail=True, methods=["get"], url_path="upload-categories")
     def upload_categories(self, request, pk=None):
         monument = self.get_object()
@@ -109,19 +106,18 @@ def dictfetchall(cursor):
     columns = [col[0] for col in cursor.description]
     return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
+
 def meters_to_degrees(meters):
-    return float(meters  / 1000)  * (1.0 / 111.0)
+    return float(meters / 1000) * (1.0 / 111.0)
 
 
 def clusters_to_feature_collection(clusters):
     features = []
     for cluster in clusters:
-        properties = {
-            "ids": cluster["ids"]
-        }
+        properties = {"ids": cluster["ids"]}
         if "properties" in cluster and cluster["properties"]:
             properties.update(json.loads(cluster["properties"]))
-        
+
         features.append(
             {
                 "type": "Feature",
@@ -146,12 +142,8 @@ def get_eps_for_resolution(res):
 
 
 def qs_to_featurecollection(qs):
-    out = {
-        "type": "FeatureCollection",
-        "features": []
-    }
+    out = {"type": "FeatureCollection", "features": []}
     for row in qs:
-        
         if row["position"]:
             geom = json.loads(row["position"])
         else:
@@ -165,8 +157,8 @@ def qs_to_featurecollection(qs):
                 "geometry": geom,
                 "properties": {
                     "ids": row["ids"],
-                    #"name": row["name"]
-                }
+                    # "name": row["name"]
+                },
             }
         )
     return out
@@ -174,8 +166,7 @@ def qs_to_featurecollection(qs):
 
 class CategoriesDomainApi(APIView):
     def get(self, request):
-        """
-        """
+        """ """
         app_category_with_categories = AppCategory.objects.filter(categories__isnull=False).distinct()
         data = []
         for app_category in app_category_with_categories:
@@ -187,14 +178,17 @@ class CategoriesDomainApi(APIView):
             )
         return Response(data)
 
+
+# NOTE: AT THE MOMENT CLUSTERING IS DISABLED
+# TODO: simplify query
+
+
 class ClusterMonumentsApi(APIView):
-    #todo: cache
+    # todo: cache
     def get(self, request):
-        """
-                
-        """
+        """ """
         from django.db import connection
-        
+
         bbox = request.query_params.get("bbox", None)
         bbox = bbox.split(",")
         if len(bbox) != 4:
@@ -203,10 +197,10 @@ class ClusterMonumentsApi(APIView):
         bbox_condition = f"WHERE position && ST_MakeEnvelope({bbox[0]}, {bbox[1]}, {bbox[2]}, {bbox[3]}, 4326)"
 
         resolution = request.query_params.get("resolution", None)
-        #print(resolution)
+        # print(resolution)
         if not resolution:
             raise APIException("resolution is required")
-        
+
         municipality = request.query_params.get("municipality", None)
         only_without_pictures = request.query_params.get("only_without_pictures", None)
         in_contest = request.query_params.get("in_contest", None)
@@ -214,8 +208,20 @@ class ClusterMonumentsApi(APIView):
 
         if float(resolution) > 1000:
             # grouping by region
-            qs = Monument.objects.filter(position__isnull=False).select_related("region").values(
-                "region__name", "region__pk"
+            # looking for cache first
+            cache_key = None
+            last_snapshot = Snapshot.objects.filter(complete=True).order_by("-created").first()
+            if last_snapshot:
+                cache_key = f"cluster_region_{last_snapshot.pk}_"
+                #look for cache
+                cached = cache.get(cache_key)
+                if cached:
+                    return Response(cached)
+
+            qs = (
+                Monument.objects.filter(position__isnull=False)
+                .select_related("region")
+                .values("region__name", "region__pk")
             )
 
             if municipality:
@@ -230,23 +236,32 @@ class ClusterMonumentsApi(APIView):
                     raise APIException("Invalid category")
                 categories_pks = app_category.categories.values_list("pk", flat=True)
                 qs = qs.filter(categories__pk__in=categories_pks)
-            
-            
-            
+
             qs = qs.annotate(
                 ids=models.Count("id"),
                 position=models.functions.AsGeoJSON(models.functions.Transform("region__centroid", 3857)),
-            ).values(
-                "ids", "position", "region__name"
-            )
+            ).values("ids", "position", "region__name")
+            out = Response(qs_to_featurecollection(qs))
+            #caching
+            if cache_key:
+                cache.set(cache_key, out.data, 60*60*24*30)
+            return out
 
-            
-            return Response(qs_to_featurecollection(qs))
-        
         if float(resolution) > 300:
             # grouping by province
-            qs = Monument.objects.filter(position__isnull=False).select_related("province").values(
-                "province__name", "province__pk"
+            cache_key = None
+            last_snapshot = Snapshot.objects.filter(complete=True).order_by("-created").first()
+            if last_snapshot:
+                cache_key = f"cluster_province_{last_snapshot.pk}_"
+                #look for cache
+                cached = cache.get(cache_key)
+                if cached:
+                    return Response(cached)
+                
+            qs = (
+                Monument.objects.filter(position__isnull=False)
+                .select_related("province")
+                .values("province__name", "province__pk")
             )
 
             if municipality:
@@ -261,20 +276,20 @@ class ClusterMonumentsApi(APIView):
                     raise APIException("Invalid category")
                 categories_pks = app_category.categories.values_list("pk", flat=True)
                 qs = qs.filter(categories__pk__in=categories_pks)
-            
-            
+
             qs = qs.annotate(
                 ids=models.Count("id"),
                 position=models.functions.AsGeoJSON(models.functions.Transform("province__centroid", 3857)),
-            ).values(
-                "ids", "position", "province__name"
-            )
-            return Response(qs_to_featurecollection(qs))
-
-    
-        eps = get_eps_for_resolution(float(resolution))
+            ).values("ids", "position", "province__name")
+            out = Response(qs_to_featurecollection(qs))
+            #caching
+            if cache_key:
+                cache.set(cache_key, out.data, 60*60*24*30)
+            return out
 
         
+        #"fake" clustering
+        eps = get_eps_for_resolution(float(resolution))
 
         filter_condition = ""
         if municipality:
@@ -288,7 +303,9 @@ class ClusterMonumentsApi(APIView):
             if not app_category:
                 raise APIException("Invalid category")
             categories_pks = app_category.categories.values_list("pk", flat=True)
-            filter_condition += f" AND main_monument_categories.category_id IN ({','.join([str(pk) for pk in categories_pks])})"
+            filter_condition += (
+                f" AND main_monument_categories.category_id IN ({','.join([str(pk) for pk in categories_pks])})"
+            )
 
         cursor = connection.cursor()
         cursor.execute(
@@ -334,13 +351,14 @@ class ClusterMonumentsApi(APIView):
         out = clusters_to_feature_collection(rows)
         return Response(out)
 
-        
+
 class UploadImageView(APIView):
     permission_classes = (IsAuthenticated,)
+
     def post(self, request, *args, **kwargs):
         ser = UploadImagesSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
-        
+
         user = request.user
         oauth_token = OAuth2Token.objects.get(user=user)
         username = user.username[4:]
@@ -349,7 +367,6 @@ class UploadImageView(APIView):
 
         all_results = []
         did_fail = False
-
 
         for uploaded_image in ser.validated_data["images"]:
             title = uploaded_image["title"]
@@ -364,9 +381,9 @@ class UploadImageView(APIView):
             # TODO CHECK EXISTENCE
             # GRAB CSRF TOKEN
             csrf_res = oauth.mediawiki.get(
-                settings.URL_ACTION_API, 
-                params={ "action": "query", "meta": "tokens", "format": "json", "type": "csrf" }, 
-                token=oauth_token.to_token()
+                settings.URL_ACTION_API,
+                params={"action": "query", "meta": "tokens", "format": "json", "type": "csrf"},
+                token=oauth_token.to_token(),
             )
             csrf_res.raise_for_status()
             csrf_token = csrf_res.json()["query"]["tokens"]["csrftoken"]
@@ -377,7 +394,7 @@ class UploadImageView(APIView):
                 urls = get_upload_categories(monument.q_number)
             except Exception as e:
                 urls = {}
-                
+
             uploadurl_wlm = urls.get("uploadurl", "")
             uploadurl_nonwlm = urls.get("nonwlmuploadurl", "")
             if uploadurl_wlm and "categories=" in uploadurl_wlm:
@@ -391,17 +408,25 @@ class UploadImageView(APIView):
             # GENERATE TEXT
             text = "== {{int:filedesc}} ==\n"
             text += "{{Information\n"
-            text += "|description={{it|1=%s}}{{Monumento italiano|%s|anno=%s}}{{Load via app WLM.it|year=%s}}\n" % (description, str(monument.wlm_n), str(date.year), year )
-            text += "|date=%s\n" % (date_text, )
+            text += "|description={{it|1=%s}}{{Monumento italiano|%s|anno=%s}}{{Load via app WLM.it|year=%s}}\n" % (
+                description,
+                str(monument.wlm_n),
+                str(date.year),
+                year,
+            )
+            text += "|date=%s\n" % (date_text,)
             text += "|source={{own}}\n"
-            text += "|author=[[User:%s|%s]]\n" % (username, username, )
+            text += "|author=[[User:%s|%s]]\n" % (
+                username,
+                username,
+            )
             text += "}}\n"
             text += "\n"
             text += "== {{int:license-header}} ==\n"
             text += "{{self|cc-by-sa-4.0}}\n"
 
             if monument.in_contest:
-                text += "{{Wiki Loves Monuments %s|it}}" % (year, )
+                text += "{{Wiki Loves Monuments %s|it}}" % (year,)
                 text += "\n".join(wlm_categories)
             else:
                 text += "\n".join(non_wlm_categories)
@@ -417,13 +442,9 @@ class UploadImageView(APIView):
                     "format": "json",
                     "token": csrf_token,
                 },
-                files={
-                    "file": image
-                },
-                headers={
-                    "Authorization": f"Bearer {oauth_token.access_token}"
-                }, 
-                token=oauth_token.to_token()
+                files={"file": image},
+                headers={"Authorization": f"Bearer {oauth_token.access_token}"},
+                token=oauth_token.to_token(),
             )
             if upload_res.ok:
                 upload_res_data = upload_res.json()
@@ -432,18 +453,20 @@ class UploadImageView(APIView):
                 else:
                     Picture.objects.create(
                         monument=monument,
-                        image_id=str(uuid4()), # la upload response non ritorna l'ID pagina, mettiamo un id casuale per il vincolo di unicità del DB, a meno di problemi
+                        image_id=str(
+                            uuid4()
+                        ),  # la upload response non ritorna l'ID pagina, mettiamo un id casuale per il vincolo di unicità del DB, a meno di problemi
                         image_url=upload_res_data["upload"]["imageinfo"]["url"],
                         image_date=timezone.now(),
                         image_title=title,
                         image_type="wlm",
                         data={
-                            "title": title, 
-                            "Artist": f"<a href=\"{settings.WIKIMEDIA_BASE_URL}/wiki/User:{username}\" title=\"User:{username}\">{username}</a>", 
-                            "ImageDescription": description, 
+                            "title": title,
+                            "Artist": f'<a href="{settings.WIKIMEDIA_BASE_URL}/wiki/User:{username}" title="User:{username}">{username}</a>',
+                            "ImageDescription": description,
                             "License": "cc-by-sa-4.0",
-                            "source": "user-upload"
-                        }
+                            "source": "user-upload",
+                        },
                     )
                 all_results.append(upload_res_data)
             else:
@@ -457,24 +480,25 @@ class UploadImageView(APIView):
             return Response(status=418, data=all_results)
         else:
             return Response(status=200, data=all_results)
-        
+
 
 class PersonalContributionsView(APIView):
     permission_classes = (IsAuthenticated,)
+
     def get(self, request, *args, **kwargs):
         response = requests.post(
-                settings.URL_ACTION_API,
-                data={
-                    "action": "query",
-                    "format": "json",
-                    "prop": "imageinfo",
-                    "generator": "allimages",
-                    "gaiuser": request.user.username[4:],
-                    "gaisort": "timestamp",
-                    "gailimit": "15",
-                    "iiprop": "timestamp|user|url",
-                },
-            )
+            settings.URL_ACTION_API,
+            data={
+                "action": "query",
+                "format": "json",
+                "prop": "imageinfo",
+                "generator": "allimages",
+                "gaiuser": request.user.username[4:],
+                "gaisort": "timestamp",
+                "gailimit": "15",
+                "iiprop": "timestamp|user|url",
+            },
+        )
         response.raise_for_status()
         data = response.json()
         print(data)
