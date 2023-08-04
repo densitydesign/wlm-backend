@@ -81,6 +81,8 @@ SELECT DISTINCT ?item
 
 def get_monument_data(q_number):
     monument_data = execute_query(SPARQL_MONUMENT % q_number)
+    if len(monument_data["results"]["bindings"]) == 0:
+        return None
     monument_data = monument_data["results"]["bindings"][0]
     monument_data = format_monument(monument_data)
     
@@ -145,6 +147,8 @@ def get_upload_categories(q_number):
     mon_url = baselink.replace("(", "%28").replace(")", "%29")
 
     monument_data = get_monument_data(q_number)
+    if not monument_data:
+        return None
     regarr = regioni.get(monument_data["regione"])
 
     if monument_data["is_religious"]:

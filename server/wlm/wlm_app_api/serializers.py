@@ -2,6 +2,7 @@ from main.models import Monument, Picture
 from rest_framework import serializers
 from rest_framework_gis.serializers import GeometryField, GeoFeatureModelSerializer, GeometrySerializerMethodField
 from django.db import models
+from .helpers import get_upload_categories
 import json
 
 class MonumentAppListSerialier(serializers.ModelSerializer):
@@ -53,6 +54,7 @@ class MonumentAppDetailSerialier(serializers.ModelSerializer):
     municipality_label = serializers.CharField(source="municipality.name", read_only=True)
     province_label = serializers.CharField(source="municipality.province.name", read_only=True)
     distance = serializers.FloatField(read_only=True, required=False)
+    categories_urls = serializers.SerializerMethodField()
 
     def get_pictures(self, obj):
         pictures = obj.pictures.all().order_by('-image_date')
@@ -99,6 +101,9 @@ class MonumentAppDetailSerialier(serializers.ModelSerializer):
                 return None
         else:
             return None
+
+    def get_categories_urls(self, obj):
+        return get_upload_categories(obj.q_number)
             
         
     
