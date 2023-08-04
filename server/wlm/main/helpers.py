@@ -24,6 +24,7 @@ from django.db import transaction, models
 from django.forms import ValidationError
 from django.utils.timezone import make_aware
 from django.contrib.gis.geos import Point
+from joblib import Parallel, delayed
 from main.wiki_api import (
     format_monument,
     WLM_QUERIES,
@@ -483,14 +484,17 @@ def update_monument(
     if not skip_pictures:
         logger.info(f"Updating pictures for {code}")
         # relevant image
+        
         for relevant_image_url in relevant_images:
             relevant_images_data = search_commons_url(relevant_image_url)
+            #logger.info(f"found {len(relevant_images_data)} relevant images for {code}")
             for image in relevant_images_data:
                 update_image(monument, image, "commons")
                 commons_pics_collected += 1
 
         if wlm_n:
             images = search_commons_wlm(wlm_n)
+            #logger.info(f"found {len(images)} wlm images for {code}")
             for image in images:
                 update_image(monument, image, "wlm")
                 wlm_pics_collected += 1
@@ -543,7 +547,20 @@ def update_monument(
 def update_category(
     monuments, category_snapshot, skip_pictures=False, skip_geo=False, category_only=False, reset_pictures=False
 ):
-    for monument in monuments:
+    # for monument in monuments:
+    #     try:
+    #         update_monument(
+    #             monument,
+    #             category_snapshot,
+    #             skip_pictures=skip_pictures,
+    #             skip_geo=skip_geo,
+    #             category_only=category_only,
+    #             reset_pictures=reset_pictures,
+    #         )
+    #     except Exception as e:
+    #         logger.exception(e)
+
+    def process_monument(monument):
         try:
             update_monument(
                 monument,
@@ -556,7 +573,11 @@ def update_category(
         except Exception as e:
             logger.exception(e)
 
-@retry(tries=5, delay=5)
+    Parallel(n_jobs=12, prefer="threads")(delayed(process_monument)(mon) for mon in monuments)
+
+
+
+@retry(tries=5, delay=15)
 def get_category_snapshot_payload(cat_snapshot):
     logger.info(f"get_category_snapshot_payload {cat_snapshot.category.label}")
     if not cat_snapshot.payload:
@@ -688,12 +709,6 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
         qs = [x.get('mon', None) for x in monuments_data]
         all_q_numbers += list(set(qs))
 
-    #deleting monuments that are not referenced by sparql. 
-    #could be a large query but postgres should handle it gracefully
-    monuments_to_delete = Monument.objects.exclude(q_number__in=all_q_numbers)
-    logger.info(f"deleting monuments missing in snapshot")
-    monuments_to_delete.delete()
-    
     for cat_snapshot in categories_snapshots:        
         if cat_snapshot.complete:
             continue
@@ -706,6 +721,13 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
         )
         cat_snapshot.complete = True
         cat_snapshot.save()
+
+    #deleting monuments that are not referenced by sparql. 
+    #could be a large query but postgres should handle it gracefully
+    monuments_to_delete = Monument.objects.exclude(q_number__in=all_q_numbers)
+    logger.info(f"deleting monuments missing in snapshot")
+    monuments_to_delete.delete()
+    
 
     # fixing empty positions
     if not skip_geo:
