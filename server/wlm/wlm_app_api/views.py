@@ -142,7 +142,7 @@ def get_eps_for_resolution(res):
     else:
         x = 50
     out = meters_to_degrees(float(x))
-    return out
+    return 0
 
 
 def qs_to_featurecollection(qs):
