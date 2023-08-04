@@ -3,6 +3,7 @@ import re
 import datetime
 from main.helpers import execute_query, monument_prop, format_monument
 from .como_q_numbers import COMO_Q_NUMBERS
+from retry import retry
 
 def normalize_value(value):
     v = str(value)
@@ -78,7 +79,7 @@ SELECT DISTINCT ?item
 
 """
 
-
+@retry(tries=3, delay=0)
 def get_monument_data(q_number):
     monument_data = execute_query(SPARQL_MONUMENT % q_number)
     if len(monument_data["results"]["bindings"]) == 0:
@@ -145,8 +146,11 @@ def get_upload_categories(q_number):
     baselink = data["parse"]["externallinks"][0]
 
     mon_url = baselink.replace("(", "%28").replace(")", "%29")
+    try:
+        monument_data = get_monument_data(q_number)
+    except Exception as e:
+        return None
 
-    monument_data = get_monument_data(q_number)
     if not monument_data:
         return None
     regarr = regioni.get(monument_data["regione"])
