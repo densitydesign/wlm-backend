@@ -601,7 +601,7 @@ def update_category(
 
 
 
-@retry(tries=5, delay=15)
+@retry(tries=5, delay=45)
 def get_category_snapshot_payload(cat_snapshot):
     logger.info(f"get_category_snapshot_payload {cat_snapshot.category.label}")
     if not cat_snapshot.payload:
@@ -612,7 +612,7 @@ def get_category_snapshot_payload(cat_snapshot):
         while should_run:
             logger.info(f"offset {offset}")
 
-            @retry(tries=3, delay=15)
+            @retry(tries=5, delay=25)
             def inner_call():
                 results = execute_query(cat_snapshot.query, limit=10000, offset=offset)
                 return results
