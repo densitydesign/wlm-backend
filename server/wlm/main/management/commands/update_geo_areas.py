@@ -9,11 +9,12 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--dry-run', action='store_true', required=False)
+        parser.add_argument('--all', action='store_true', required=False)
 
     
     #@transaction.atomic
     def handle(self, *args, **options):
-        update_geo_areas()
+        update_geo_areas(all=options["all"])
 
 
 #self.stdout.write(self.style.SUCCESS('Successfully closed poll "%s"' % poll_id))

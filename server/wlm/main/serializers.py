@@ -101,7 +101,6 @@ class MonumentImageSerializer(serializers.ModelSerializer):
 
 class MonumentSerializer(serializers.ModelSerializer):
     pictures = PictureSerializer(many=True, read_only=True)
-    # images_monument = MonumentImageSerializer(many=True, read_only=True)
     wlm_id = serializers.CharField(source="wlm_n")
     wlm_auth_start_date = serializers.DateTimeField(source="start")
     wlm_auth_end_date = serializers.DateTimeField(source="end")
@@ -146,6 +145,8 @@ class MonumentSerializer(serializers.ModelSerializer):
             "to_review",
             "article",
             "location",
+            "address",
+            "admin_entity",
         ]
 
 
@@ -153,7 +154,6 @@ class MonumentSmallSerializer(serializers.ModelSerializer):
     class Meta:
         model = Monument
         fields = "__all__"
-        # fields = ["id", "q_number", "label"]
 
 
 class WLMQuerySerializer(serializers.Serializer):

@@ -384,7 +384,26 @@ def update_image(monument, image_data, image_type):
 def parse_point(point_str):
     return point_str.upper().replace("POINT(", "").replace(")", "").split(" ")
 
-def get_administrative_areas(position):
+def get_administrative_areas(position, admin_entity=None):
+    """
+    
+    """
+    if admin_entity is not None:
+        municipalities = get_wikidata_municipalities()
+        if admin_entity in municipalities:
+            municipality_istat = municipalities[admin_entity]
+            try:
+                municipality = Municipality.objects.get(
+                   code=municipality_istat,
+                )
+                province = municipality.province
+                region = province.region
+                logger.info(f"geo areas updated from admin_entity ({admin_entity})")
+                return {"municipality":municipality, "province":province, "region":region}
+
+            except MunicipalityLookup.DoesNotExist:
+                pass
+
     try:
         municipality_look = MunicipalityLookup.objects.get(
             poly__contains=position,
@@ -394,6 +413,7 @@ def get_administrative_areas(position):
         )
         province = municipality.province
         region = province.region
+        logger.info(f"geo areas updated from geo lookup (position)")
         return {"municipality":municipality, "province":province, "region":region}
     except MunicipalityLookup.DoesNotExist:
         return None
@@ -466,7 +486,7 @@ def update_monument(
     }
 
     if not skip_geo and position is not None:
-        administrative_areas = get_administrative_areas(position)
+        administrative_areas = get_administrative_areas(position, admin_entity)
         if administrative_areas is not None:
             defaults.update(administrative_areas)
 
@@ -657,20 +677,23 @@ def update_geo_from_parents():
                 pass
 
 
-def update_geo_areas():
+def update_geo_areas(all=False):
     """tries to update missing municipalities, provinces and regions on all the dataset"""
-    qs = Monument.objects.filter(municipality=None, position__isnull=False)
-    print(qs.count())
+    qs = Monument.objects.all()
+    if not all:
+        qs = qs.filter(municipality=None, position__isnull=False)
+
+    logger.info("Updating geo areas for " + str(qs.count()) + " monuments")
     for monument in qs:
-        administrative_areas = get_administrative_areas(monument.position)
+        administrative_areas = get_administrative_areas(monument.position, monument.admin_entity)
         if administrative_areas:
             monument.municipality = administrative_areas["municipality"]
             monument.province = administrative_areas["province"]
             monument.region = administrative_areas["region"]
             monument.save()
-            print(f"updated {monument.q_number} administrative areas")
+            logger.info(f"updated {monument.q_number} administrative areas")
         else:
-            print(f"no administrative areas for {monument.q_number}")
+            logger.info(f"no administrative areas for {monument.q_number}")
         
 
 
@@ -1078,3 +1101,72 @@ def create_export(snapshot):
 
     snapshot.save()
     logger.info(f"created xlsx and csv exports for snapshot {snapshot}")
+
+
+
+
+@retry(tries=5, delay=15)
+def get_wikidata_municipalities():
+    """
+    Cached Lookup for municipalities q numbers
+    updated once a day
+    """
+
+    #last_snapshot = Snapshot.objects.filter(complete=True).order_by("-created").first()
+    today = date.today().isoformat()
+    cache_key = f"wikidata_monuments-municipalities-{today}"
+    cache_value = cache.get(cache_key)
+    if cache_value:
+        #logger.info(f"Getting muncipalities from cache of {today}")
+        return cache_value
+
+    SPARQL_MUNICIPALITIES = """
+
+    SELECT
+    ?comune
+    ( SAMPLE( ?comuneLabel    ) AS ?comuneLabel    )
+    ( SAMPLE( ?comuneIstat    ) AS ?comuneIstat    )
+    WHERE
+    {
+
+    {
+        # i comuni italiani
+        ?comune wdt:P31 wd:Q747074.
+    } UNION {
+        # ed in comuni "sparsi" 
+        ?comune wdt:P31 wd:Q954172.
+    }
+
+    # solo i comuni con codice ISTAT e posizione
+    ?comune wdt:P635 ?comuneIstat;
+            wdt:P625 ?position.
+
+    # non voglio i comuni "defunti"
+    MINUS { ?comune pq:P582 ?comuneDef }
+
+    ?comune  rdfs:label ?comuneLabel.
+    FILTER( LANG( ?comuneLabel  ) = "it" ).
+
+    }
+    GROUP BY ?comune
+    ORDER BY ?comuneLabel
+    
+    """
+    logger.info("Getting muncipalities from wikidata")
+    results = execute_query(SPARQL_MUNICIPALITIES)
+    data = results["results"]["bindings"]
+
+    municipalities = {}
+    for _result in data:
+        result = format_monument(_result)
+        q_number = monument_prop(result, "comune", "")
+        comuneIstat = int(monument_prop(result, "comuneIstat", ""))
+        municipalities[q_number]  = comuneIstat
+    
+    cache.set(cache_key, municipalities, 60*60*24)
+    return municipalities
+                            
+
+
+
+
