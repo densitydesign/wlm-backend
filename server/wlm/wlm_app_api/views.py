@@ -359,6 +359,8 @@ class UploadImageView(APIView):
         ser = UploadImagesSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
 
+        platform = ser.validated_data.get("platform", "desktop")
+
         user = request.user
         oauth_token = OAuth2Token.objects.get(user=user)
         username = user.username[4:]
@@ -391,7 +393,7 @@ class UploadImageView(APIView):
             wlm_categories = []
             non_wlm_categories = []
             try:
-                urls = get_upload_categories(monument.q_number)
+                urls = get_upload_categories(monument.q_number) or {}
             except Exception as e:
                 urls = {}
 
@@ -408,11 +410,12 @@ class UploadImageView(APIView):
             # GENERATE TEXT
             text = "== {{int:filedesc}} ==\n"
             text += "{{Information\n"
-            text += "|description={{it|1=%s}}{{Monumento italiano|%s|anno=%s}}{{Load via app WLM.it|year=%s}}\n" % (
+            text += "|description={{it|1=%s}}{{Monumento italiano|%s|anno=%s}}{{Load via app WLM.it|year=%s|source=%s}}\n" % (
                 description,
                 str(monument.wlm_n),
                 str(date.year),
                 year,
+                platform,
             )
             text += "|date=%s\n" % (date_text,)
             text += "|source={{own}}\n"
@@ -427,6 +430,8 @@ class UploadImageView(APIView):
 
             if monument.in_contest:
                 text += "{{Wiki Loves Monuments %s|it}}" % (year,)
+                if wlm_categories:
+                    text += "\n"
                 text += "\n".join(wlm_categories)
             else:
                 text += "\n".join(non_wlm_categories)

@@ -144,3 +144,4 @@ class UploadImageSerializer(serializers.Serializer):
 
 class UploadImagesSerializer(serializers.Serializer):
     images = UploadImageSerializer(many=True)
+    platform = serializers.CharField(required=False, default="desktop")

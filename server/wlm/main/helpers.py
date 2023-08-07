@@ -526,7 +526,7 @@ def update_monument(
     if not skip_pictures:
         monument.pictures_wlm_count = wlm_pics_collected
         monument.pictures_commons_count = commons_pics_collected
-        monument.pictures_count = wlm_pics_collected + commons_pics_collected
+        monument.pictures_count = monument.pictures.all().count()
         if wlm_pics_collected > 0 and commons_pics_collected == 0:
             monument.to_review = True
 
