@@ -11,6 +11,8 @@ SELECT DISTINCT
   (group_concat(DISTINCT ?approvedBy; separator=";") as ?approvedBy_n)
   (group_concat(DISTINCT ?relevantImage; separator=";") as ?relevantImage_n)
   (group_concat(DISTINCT ?commonsCat; separator=";") as ?commons_n)
+  (SAMPLE(?address) as ?address)
+  (SAMPLE(?adminEntity) as ?adminEntity)
 
 WHERE {
   SERVICE wikibase:label { bd:serviceParam wikibase:language "it, [AUTO_LANGUAGE]". }
@@ -40,9 +42,11 @@ WHERE {
   OPTIONAL { ?mon wdt:P361 ?parent }
   OPTIONAL { ?mon wdt:P18 ?relevantImage . }
   OPTIONAL { ?mon wdt:P373 ?commonsCat . }
+  OPTIONAL { ?mon wdt:P131 ?adminEntity . }
+  OPTIONAL { ?mon wdt:P6375 ?address . }
   
 
 }
 
-GROUP BY ?mon ?monLabel ?dateeee
+GROUP BY ?mon ?monLabel
 ORDER BY ?monLabel

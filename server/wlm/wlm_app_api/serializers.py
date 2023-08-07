@@ -35,7 +35,7 @@ class MonumentAppListSerialier(serializers.ModelSerializer):
 
     class Meta:
         model = Monument
-        fields = ['id', 'label', 'municipality_label', 'municipality', 'pictures_wlm_count', 'pictures_count', 'in_contest', "app_category", "distance"]
+        fields = ['id', 'label', 'municipality_label', 'municipality', 'pictures_wlm_count', 'pictures_count', 'in_contest', "app_category", "distance", "address"]
 
 
 class PictureSerializer(serializers.ModelSerializer):

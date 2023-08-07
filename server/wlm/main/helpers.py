@@ -443,6 +443,8 @@ def update_monument(
     approved_by = monument_data.get("approvedBy_n", "")
     article = monument_prop(monument_data, "article", "")
     location = monument_prop(monument_data, "locationLabel", "")
+    address = monument_prop(monument_data, "address", "")
+    admin_entity = monument_prop(monument_data, "adminEntity", "")
     
 
     defaults = {
@@ -459,6 +461,8 @@ def update_monument(
         "approved_by":approved_by,
         "article":article,
         "location":location,
+        "address": address,
+        "admin_entity": admin_entity,
     }
 
     if not skip_geo and position is not None:

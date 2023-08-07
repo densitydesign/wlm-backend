@@ -140,6 +140,8 @@ class Monument(models.Model):
 
     article = models.CharField(max_length=500, blank=True, default='')
     location = models.CharField(max_length=500, blank=True, default='')
+    address = models.CharField(max_length=500, blank=True, default='')
+    admin_entity = models.CharField(max_length=100, blank=True, default='')
     
     class Meta:
         index_together = [

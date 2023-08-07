@@ -212,7 +212,7 @@ class ClusterMonumentsApi(APIView):
             cache_key = None
             last_snapshot = Snapshot.objects.filter(complete=True).order_by("-created").first()
             if last_snapshot:
-                cache_key = f"cluster_region_{last_snapshot.pk}_"
+                cache_key = f"cluster_region_{last_snapshot.pk}_" + str(request.query_params)
                 #look for cache
                 cached = cache.get(cache_key)
                 if cached:
@@ -252,7 +252,7 @@ class ClusterMonumentsApi(APIView):
             cache_key = None
             last_snapshot = Snapshot.objects.filter(complete=True).order_by("-created").first()
             if last_snapshot:
-                cache_key = f"cluster_province_{last_snapshot.pk}_"
+                cache_key = f"cluster_province_{last_snapshot.pk}_" + str(request.query_params)
                 #look for cache
                 cached = cache.get(cache_key)
                 if cached:
