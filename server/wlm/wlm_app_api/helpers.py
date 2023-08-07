@@ -90,7 +90,7 @@ def get_monument_data(q_number):
     data = {
         "item": monument_prop(monument_data, "item"),
         "regione": monument_prop(monument_data, "regioneLabel"),
-        "is_religious": normalize_value(monument_prop(monument_data, "endorsedby")) != "",
+        "is_religious": bool(normalize_value(monument_prop(monument_data, "endorsedby"))),
         "city_item": normalize_value(monument_prop(monument_data, "unit")),
     }
 
