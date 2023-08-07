@@ -13,6 +13,9 @@ SELECT DISTINCT
   (group_concat(DISTINCT ?approvedBy; separator=";") as ?approvedBy_n)
   (group_concat(DISTINCT ?relevantImage; separator=";") as ?relevantImage_n)
   (group_concat(DISTINCT ?commonsCat; separator=";") as ?commons_n)
+  (SAMPLE(?address) as ?address)
+  (SAMPLE(?adminEntity) as ?adminEntity)
+
 WHERE {
   VALUES ?tipi {
     wd:Q_NUMBER_TYPE
@@ -50,6 +53,8 @@ WHERE {
     ?article schema:about ?mon.
     FILTER REGEX(STR(?article), ".it.wikipedia.org/wiki/") .
   }
+  OPTIONAL { ?mon wdt:P131 ?adminEntity . }
+  OPTIONAL { ?mon wdt:P6375 ?address . }
 }
 
 GROUP BY ?mon ?monLabel ?locationLabel ?article
