@@ -68,7 +68,7 @@ class MonumentAppViewSet(viewsets.ReadOnlyModelViewSet):
         SearchFilter,
     ]
     ordering_fields = ["label", "pictures_count"]
-    search_fields = ["label", "municipality__name"]
+    search_fields = ["label", "municipality__name", "q_number"]
     filterset_class = MonumentFilter
 
     def get_queryset(self):
