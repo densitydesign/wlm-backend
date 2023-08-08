@@ -392,21 +392,26 @@ class UploadImageView(APIView):
             # COMPUTE CATEGORIES
             wlm_categories = []
             non_wlm_categories = []
+            
             try:
-                urls = get_upload_categories(monument.q_number) or {}
+                categories = get_upload_categories(monument.q_number) or {}
             except Exception as e:
-                urls = {}
-
-            uploadurl_wlm = urls.get("uploadurl", "")
-            uploadurl_nonwlm = urls.get("nonwlmuploadurl", "")
-            if uploadurl_wlm and "categories=" in uploadurl_wlm:
-                parts = urlparse(uploadurl_wlm)
-                queryparams = parse_qs(parts.query)
-                wlm_categories = [f"[[Category:{cat}]]" for cat in queryparams["categories"][0].split("|")]
-            if uploadurl_nonwlm and "categories=" in uploadurl_nonwlm:
-                parts = urlparse(uploadurl_wlm)
-                queryparams = parse_qs(parts.query)
-                non_wlm_categories = [f"[[Category:{cat}]]" for cat in queryparams["categories"][0].split("|")]
+                categories = {}
+            
+            # uploadurl_wlm = urls.get("uploadurl", "")
+            # uploadurl_nonwlm = urls.get("nonwlmuploadurl", "")
+            # if uploadurl_wlm and "categories=" in uploadurl_wlm:
+            #     parts = urlparse(uploadurl_wlm)
+            #     queryparams = parse_qs(parts.query)
+            #     wlm_categories = [f"[[Category:{cat}]]" for cat in queryparams["categories"][0].split("|")]
+            # if uploadurl_nonwlm and "categories=" in uploadurl_nonwlm:
+            #     parts = urlparse(uploadurl_wlm)
+            #     queryparams = parse_qs(parts.query)
+            #     non_wlm_categories = [f"[[Category:{cat}]]" for cat in queryparams["categories"][0].split("|")]
+            wlm_categories = [f"[[Category:{cat}]]" for cat in categories.get("wlm_categories", [])]
+            non_wlm_categories = [f"[[Category:{cat}]]" for cat in categories.get("non_wlm_categories", [])]
+            
+            
             # GENERATE TEXT
             text = "== {{int:filedesc}} ==\n"
             text += "{{Information\n"

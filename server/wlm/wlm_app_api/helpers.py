@@ -2,8 +2,12 @@ import requests
 import re    
 import datetime
 from main.helpers import execute_query, monument_prop, format_monument
+from main.models import Monument
 from .como_q_numbers import COMO_Q_NUMBERS
 from retry import retry
+import logging
+
+logger = logging.getLogger(__name__)
 
 def normalize_value(value):
     v = str(value)
@@ -86,11 +90,13 @@ def get_monument_data(q_number):
         return None
     monument_data = monument_data["results"]["bindings"][0]
     monument_data = format_monument(monument_data)
+
+    print(1, monument_data)
     
     data = {
         "item": monument_prop(monument_data, "item"),
         "regione": monument_prop(monument_data, "regioneLabel"),
-        "is_religious": bool(normalize_value(monument_prop(monument_data, "endorsedby"))),
+        "is_religious": bool(monument_prop(monument_data, "endorsedby")),
         "city_item": normalize_value(monument_prop(monument_data, "unit")),
     }
 
@@ -112,7 +118,7 @@ VALLE_DEL_PRIMO_PRESEPE = ["Q223423","Q223427","Q223434","Q223459","Q223472","Q2
 
 TERRE_DELLA_UFITA = ["Q55007","Q55008","Q55016","Q55033","Q55036","Q55042","Q55085","Q55121","Q55139"]
 
-def get_upload_categories(q_number):
+def _get_upload_categories(q_number):
     regioni = {
         "Abruzzo": ["Abruzzo", True],
         "Basilicata": ["Basilicata", False],
@@ -198,3 +204,137 @@ def get_upload_categories(q_number):
         "uploadurl": mon_url,
         "nonwlmuploadurl": notwlm,
     }
+
+
+
+def get_upload_categories(q_number):
+    regioni = {
+        "Abruzzo": ["Abruzzo", True],
+        "Basilicata": ["Basilicata", False],
+        "Calabria": ["Calabria", False],
+        "Campania": ["Campania", False],
+        "Emilia-Romagna": ["Emilia-Romagna", False],
+        "Friuli-Venezia Giulia": ["Friuli-Venezia Giulia", True],
+        "Lazio": ["Lazio", False],
+        "Liguria": ["Liguria", True],
+        "Lombardia": ["Lombardy", True],
+        "Marche": ["Marche", True],
+        "Molise": ["Molise", False],
+        "Piemonte": ["Piedmont", True],
+        "Puglia": ["Apulia", True],
+        "Sardegna": ["Sardinia", False],
+        "Sicilia": ["Sicily", False],
+        "Toscana": ["Tuscany", True],
+        "Trentino-Alto Adige": ["Trentino-South Tyrol", False],
+        "Umbria": ["Umbria", True],
+        "Valle d'Aosta": ["Aosta Valley", True],
+        "Veneto": ["Veneto", False],
+    }
+
+    today = datetime.date.today()
+    wlm_categories = []
+    non_wlm_categories = []
+    
+    
+    try:
+        monument_data = get_monument_data(q_number)
+    except Exception as e:
+        logger.info("cannot get monument data")
+        monument_data = None
+
+    #also look in our db
+    monument =  Monument.objects.get(q_number=q_number)
+    monument_categories = monument.categories.all().values_list('label', flat=True)
+    #print(monument_categories)
+    
+    
+    #print(monument.data)
+    if monument.data and monument.data.get('commons_n', []):
+        non_wlm_categories += monument.data.get('commons_n', [])
+    elif monument.data and monument.data.get('place_n', []):
+        place_n = monument.data.get('place_n')[0]
+        cat_sparql = """
+        SELECT 
+            ?x  
+            (group_concat(DISTINCT ?commonsCat; separator=";") as ?commons_s)
+            WHERE {
+            VALUES  ?x { wd:%s }
+            OPTIONAL { ?x wdt:P373 ?commonsCat }
+            }
+
+            GROUP BY ?x
+        """ % place_n
+        res_cat = execute_query(cat_sparql)
+        commons_cats = format_monument(res_cat["results"]["bindings"][0])
+        if commons_cats.get('commons_s', None):
+            non_wlm_categories += commons_cats['commons_s'].split(";")
+    
+    wlm_categories = [x for x in non_wlm_categories]
+    
+    base_category = f"Images+from+Wiki+Loves+Monuments+{today.year}+in+Italy"
+    wlm_categories.append(base_category)
+
+
+    WIKI_API_URL = f"https://it.wikipedia.org/w/api.php?action=parse&text={{{{%23invoke:WLM|upload_url|{q_number}}}}}&contentmodel=wikitext&format=json"
+    
+    response = requests.get(WIKI_API_URL)
+    data = response.json()
+    baselink = data["parse"]["externallinks"][0]
+
+    mon_url = baselink.replace("(", "%28").replace(")", "%29")
+    print(mon_url)
+
+    
+    if 'monumental tree' in monument_categories:
+        wlm_categories.append(base_category + "+-+" + 'veteran+trees')
+        non_wlm_categories.append('veteran+trees')
+    
+    elif 'municipality overview picture' in monument_categories:
+        wlm_categories.append(base_category + "+-+" + 'cityscapes')
+        non_wlm_categories.append('cityscapes')
+    
+    elif monument_data and monument_data['is_religious']:
+        wlm_categories.append(base_category + "+-+" + 'religious+building')
+        non_wlm_categories.append('religious+building')
+    
+    else:
+        wlm_categories.append(base_category + "+-+" + 'traditional contest')
+        non_wlm_categories.append('traditional contest')
+
+    #print (monument.region.name)
+    if monument.region:
+        region_name = monument.region.name
+    else:
+        region_name = None
+
+    regarr = regioni.get(region_name, None)
+    if regarr:
+        regione_category = base_category + "+-+" + regarr[0]
+        wlm_categories.append(regione_category)
+
+        como_q_numbers = COMO_Q_NUMBERS
+
+        if monument_data and monument_data['is_religious']:
+            wlm_categories.append(regione_category + "+-+" + 'religious+building')
+
+        if monument_data and regarr[1] == False and monument_data['item'] not in como_q_numbers and  monument_data.get('city_item', None) not in VALLE_DEL_PRIMO_PRESEPE and monument_data.get('city_item', None)  not in TERRE_DELLA_UFITA:
+            wlm_categories.append(base_category + "+-+" + 'without+local+award')
+
+        if monument_data and monument_data['item'] in como_q_numbers:
+            wlm_categories.append(base_category + "+-+" + 'Lake+Como')
+        
+        if monument_data and  monument_data.get('city_item', None) in VALLE_DEL_PRIMO_PRESEPE:
+            wlm_categories.append(base_category + "+-+" + 'Valle+del+Primo+Presepe')
+
+        # Terre dell'Uftia
+        if monument_data and  monument_data.get('city_item', None) in TERRE_DELLA_UFITA:
+            wlm_categories.append(base_category + "+-+" + 'Terre+dell%27Ufita')
+            
+    
+    return {
+        "wlm_categories": wlm_categories,
+        "non_wlm_categories": non_wlm_categories,
+    }
+    
+
+

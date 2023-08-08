@@ -15,6 +15,7 @@ SELECT DISTINCT
   (group_concat(DISTINCT ?commonsCat; separator=";") as ?commons_n)
   (SAMPLE(?address) as ?address)
   (SAMPLE(?adminEntity) as ?adminEntity)
+  (SAMPLE(?location) as ?location)
 
 WHERE {
   SERVICE wikibase:label { bd:serviceParam wikibase:language "it, [AUTO_LANGUAGE]". }
