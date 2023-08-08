@@ -214,7 +214,7 @@ def get_upload_categories(q_number):
         "Calabria": ["Calabria", False],
         "Campania": ["Campania", False],
         "Emilia-Romagna": ["Emilia-Romagna", False],
-        "Friuli-Venezia Giulia": ["Friuli-Venezia Giulia", True],
+        "Friuli Venezia Giulia": ["Friuli-Venezia Giulia", True],
         "Lazio": ["Lazio", False],
         "Liguria": ["Liguria", True],
         "Lombardia": ["Lombardy", True],
@@ -306,28 +306,33 @@ def get_upload_categories(q_number):
         region_name = monument.region.name
     else:
         region_name = None
-
     regarr = regioni.get(region_name, None)
     if regarr:
         regione_category = base_category + "+-+" + regarr[0]
         wlm_categories.append(regione_category)
 
-        como_q_numbers = COMO_Q_NUMBERS
+        banned_como =["Q28375375", "Q24937411",  "Q21592570",  "Q3862651", "Q3517634" ,"Q24052892", "Q533156"]
+        como_q_numbers = [x for x in COMO_Q_NUMBERS if x not in banned_como]
+        
 
+        is_como = q_number.upper() in como_q_numbers or (monument_data and monument_data['item'] in como_q_numbers)
+        is_terre_ufita = q_number.upper() in TERRE_DELLA_UFITA or (monument_data and monument_data['city_item'] in TERRE_DELLA_UFITA)
+        is_valle_primo_presepe = q_number.upper() in VALLE_DEL_PRIMO_PRESEPE or (monument_data and monument_data['city_item'] in VALLE_DEL_PRIMO_PRESEPE)
+    
         if monument_data and monument_data['is_religious']:
             wlm_categories.append(regione_category + "+-+" + 'religious+building')
-
-        if regarr[1] == False and (not monument_data or (monument_data['item'] not in como_q_numbers and  monument_data.get('city_item', None) not in VALLE_DEL_PRIMO_PRESEPE and monument_data.get('city_item', None)  not in TERRE_DELLA_UFITA)) :
+    
+        if regarr[1] == False and not is_como and not is_terre_ufita and not is_valle_primo_presepe:
             wlm_categories.append(base_category + "+-+" + 'without+local+award')
 
-        if monument_data and monument_data['item'] in como_q_numbers:
+        if is_como:
             wlm_categories.append(base_category + "+-+" + 'Lake+Como')
         
-        if monument_data and  monument_data.get('city_item', None) in VALLE_DEL_PRIMO_PRESEPE:
+        if is_valle_primo_presepe:
             wlm_categories.append(base_category + "+-+" + 'Valle+del+Primo+Presepe')
 
         # Terre dell'Uftia
-        if monument_data and  monument_data.get('city_item', None) in TERRE_DELLA_UFITA:
+        if is_terre_ufita:
             wlm_categories.append(base_category + "+-+" + 'Terre+dell%27Ufita')
             
     
