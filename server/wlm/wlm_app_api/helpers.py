@@ -275,14 +275,14 @@ def get_upload_categories(q_number):
     wlm_categories.append(base_category)
 
 
-    WIKI_API_URL = f"https://it.wikipedia.org/w/api.php?action=parse&text={{{{%23invoke:WLM|upload_url|{q_number}}}}}&contentmodel=wikitext&format=json"
+    # WIKI_API_URL = f"https://it.wikipedia.org/w/api.php?action=parse&text={{{{%23invoke:WLM|upload_url|{q_number}}}}}&contentmodel=wikitext&format=json"
     
-    response = requests.get(WIKI_API_URL)
-    data = response.json()
-    baselink = data["parse"]["externallinks"][0]
+    # response = requests.get(WIKI_API_URL)
+    # data = response.json()
+    # baselink = data["parse"]["externallinks"][0]
 
-    mon_url = baselink.replace("(", "%28").replace(")", "%29")
-    print(mon_url)
+    # mon_url = baselink.replace("(", "%28").replace(")", "%29")
+    # print(mon_url)
 
     
     if 'monumental tree' in monument_categories:
@@ -317,7 +317,7 @@ def get_upload_categories(q_number):
         if monument_data and monument_data['is_religious']:
             wlm_categories.append(regione_category + "+-+" + 'religious+building')
 
-        if monument_data and regarr[1] == False and monument_data['item'] not in como_q_numbers and  monument_data.get('city_item', None) not in VALLE_DEL_PRIMO_PRESEPE and monument_data.get('city_item', None)  not in TERRE_DELLA_UFITA:
+        if regarr[1] == False and (not monument_data or (monument_data['item'] not in como_q_numbers and  monument_data.get('city_item', None) not in VALLE_DEL_PRIMO_PRESEPE and monument_data.get('city_item', None)  not in TERRE_DELLA_UFITA)) :
             wlm_categories.append(base_category + "+-+" + 'without+local+award')
 
         if monument_data and monument_data['item'] in como_q_numbers:
