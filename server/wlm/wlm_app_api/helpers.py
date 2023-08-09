@@ -271,7 +271,7 @@ def get_upload_categories(q_number):
     
     wlm_categories = [x for x in non_wlm_categories]
     
-    base_category = f"Images+from+Wiki+Loves+Monuments+{today.year}+in+Italy"
+    base_category = f"Images from Wiki Loves Monuments {today.year} in Italy"
     wlm_categories.append(base_category)
 
 
@@ -286,19 +286,19 @@ def get_upload_categories(q_number):
 
     
     if 'monumental tree' in monument_categories:
-        wlm_categories.append(base_category + "+-+" + 'veteran+trees')
-        non_wlm_categories.append('veteran+trees')
+        wlm_categories.append(base_category + " - veteran trees")
+        non_wlm_categories.append('veteran trees')
     
     elif 'municipality overview picture' in monument_categories:
-        wlm_categories.append(base_category + "+-+" + 'cityscapes')
+        wlm_categories.append(base_category + " - cityscapes")
         non_wlm_categories.append('cityscapes')
     
     elif monument_data and monument_data['is_religious']:
-        wlm_categories.append(base_category + "+-+" + 'religious+building')
-        non_wlm_categories.append('religious+building')
+        wlm_categories.append(base_category + " - religious building")
+        non_wlm_categories.append('religious building')
     
     else:
-        wlm_categories.append(base_category + "+-+" + 'traditional contest')
+        wlm_categories.append(base_category + " - traditional contest")
         non_wlm_categories.append('traditional contest')
 
     #print (monument.region.name)
@@ -308,7 +308,7 @@ def get_upload_categories(q_number):
         region_name = None
     regarr = regioni.get(region_name, None)
     if regarr:
-        regione_category = base_category + "+-+" + regarr[0]
+        regione_category = base_category + " - " + regarr[0]
         wlm_categories.append(regione_category)
 
         banned_como =["Q28375375", "Q24937411",  "Q21592570",  "Q3862651", "Q3517634" ,"Q24052892", "Q533156"]
@@ -320,20 +320,20 @@ def get_upload_categories(q_number):
         is_valle_primo_presepe = q_number.upper() in VALLE_DEL_PRIMO_PRESEPE or (monument_data and monument_data['city_item'] in VALLE_DEL_PRIMO_PRESEPE)
     
         if monument_data and monument_data['is_religious']:
-            wlm_categories.append(regione_category + "+-+" + 'religious+building')
+            wlm_categories.append(regione_category + " - religious building")
     
         if regarr[1] == False and not is_como and not is_terre_ufita and not is_valle_primo_presepe:
-            wlm_categories.append(base_category + "+-+" + 'without+local+award')
+            wlm_categories.append(base_category + " - without local award")
 
         if is_como:
-            wlm_categories.append(base_category + "+-+" + 'Lake+Como')
+            wlm_categories.append(base_category + " - Lake Como")
         
         if is_valle_primo_presepe:
-            wlm_categories.append(base_category + "+-+" + 'Valle+del+Primo+Presepe')
+            wlm_categories.append(base_category + " - Valle del Primo Presepe")
 
         # Terre dell'Uftia
         if is_terre_ufita:
-            wlm_categories.append(base_category + "+-+" + 'Terre+dell%27Ufita')
+            wlm_categories.append(base_category + " - Terre dell'Ufita")
             
     
     return {
