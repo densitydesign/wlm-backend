@@ -91,7 +91,7 @@ def get_monument_data(q_number):
     monument_data = monument_data["results"]["bindings"][0]
     monument_data = format_monument(monument_data)
 
-    print(1, monument_data)
+    #print(1, monument_data)
     
     data = {
         "item": monument_prop(monument_data, "item"),
