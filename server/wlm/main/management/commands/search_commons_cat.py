@@ -13,7 +13,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         
         out = search_commons_cat(options['cat'])
-        print(out)
         for x in out:
             print(x)
         
