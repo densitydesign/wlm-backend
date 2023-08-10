@@ -153,6 +153,7 @@ class Monument(models.Model):
         return self.label
     
 
+#TODO: REMOVE?
 class MonumentImage(models.Model):
     monument = models.ForeignKey(Monument, models.CASCADE, related_name="images")
     image_id = models.CharField(max_length=200, unique=True)
@@ -176,6 +177,7 @@ class Picture(models.Model):
     image_title = models.TextField(blank=True, default="")
     image_type = models.CharField(max_length=20, db_index=True)
     data = models.JSONField(default=dict)
+    is_relevant = models.BooleanField(default=False)
 
     class Meta:
         index_together = [

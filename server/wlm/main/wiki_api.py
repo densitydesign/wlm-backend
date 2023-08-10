@@ -179,6 +179,61 @@ def search_commons_wlm(wlm_id):
     return out
 
 
+
+def search_commons_cat(cat):    
+
+    #filename = url.split("FilePath/")[-1]
+    payload = {
+        "action": "query",
+        "format": "json",
+        "generator": "categorymembers",
+        "prop": "imageinfo",
+        "iiprop": "extmetadata",
+        "gcmtype": "file",
+        "gcmtitle": "Category:" + cat,
+        "gsrnamespace" : "6|12|14|100|106",
+        
+    }
+
+    next_page = True
+    out = []
+
+    while next_page:
+        params = "&".join("%s=%s" % (k,v) for k,v in payload.items())
+        r = requests.get(COMMONS_URL, params)
+        print
+        data = r.json()
+        
+        if "query" in data and "pages" in data["query"] and len(data["query"]["pages"]) > 0:
+            for pageid in data["query"]["pages"]:
+                image = data["query"]["pages"][str(pageid)]
+                temp_obj = {}
+                if "pageid" in image:
+                    temp_obj["pageid"] = image["pageid"]
+                if "title" in image:
+                    temp_obj["title"] = image["title"]
+                if "imageinfo" in image and len(image["imageinfo"]) > 0 and "extmetadata" in image["imageinfo"][0]:
+                    extmetadata = image["imageinfo"][0]["extmetadata"]
+                    if "DateTimeOriginal" in extmetadata and "value" in extmetadata["DateTimeOriginal"]:
+                        temp_obj["DateTimeOriginal"] = extmetadata["DateTimeOriginal"]["value"]
+                    if "DateTime" in extmetadata and "value" in extmetadata["DateTime"]:
+                        temp_obj["DateTime"] = extmetadata["DateTime"]["value"]
+
+                    if "Artist" in extmetadata and "value" in extmetadata["Artist"]:
+                        temp_obj["Artist"] = extmetadata["Artist"]["value"]
+                    if "License" in extmetadata and "value" in extmetadata["License"]:
+                        temp_obj["License"] = extmetadata["License"]["value"]
+                    if "ImageDescription" in extmetadata and "value" in extmetadata["ImageDescription"]:
+                        temp_obj["ImageDescription"] = extmetadata["ImageDescription"]["value"]
+
+                out.append(temp_obj)
+        
+        if "continue" in data and "gcmcontinue" in data["continue"]:
+            payload["continue"] = data["continue"]["gcmcontinue"]
+        else:
+            next_page = False
+    return out 
+
 def get_revision(q):
     
     params = {

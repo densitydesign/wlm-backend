@@ -29,7 +29,7 @@ from main.wiki_api import (
     format_monument,
     WLM_QUERIES,
     WIKI_CANDIDATE_TYPES,
-    search_commons_url,
+    search_commons_cat,
     search_commons_wlm,
     get_revision,
     get_query_template_typologies,
@@ -343,7 +343,7 @@ def monument_prop(monument_data, prop, default=None):
     return value
 
 
-def update_image(monument, image_data, image_type):
+def update_image(monument, image_data, image_type, is_relevant=False):
     image_id = image_data.get("pageid", None)
     image_title = image_data.get("title", "")
 
@@ -366,6 +366,7 @@ def update_image(monument, image_data, image_type):
             image_url=image_url,
             image_title=image_title,
             data=image_data,
+            is_relevant=is_relevant,
         )
     except Picture.DoesNotExist:
         picture = Picture.objects.create(
@@ -376,6 +377,7 @@ def update_image(monument, image_data, image_type):
             image_url=image_url,
             image_title=image_title,
             data=image_data,
+            is_relevant=is_relevant,
         )
 
     return picture
@@ -507,14 +509,32 @@ def update_monument(
     commons_pics_collected = 0
     if not skip_pictures:
         logger.info(f"Updating pictures for {code}")
-        # relevant image
+        # # relevant image
         
-        for relevant_image_url in relevant_images:
-            relevant_images_data = search_commons_url(relevant_image_url)
-            #logger.info(f"found {len(relevant_images_data)} relevant images for {code}")
-            for image in relevant_images_data:
-                update_image(monument, image, "commons")
-                commons_pics_collected += 1
+        # for relevant_image_url in relevant_images:
+        #     relevant_images_data = search_commons_url(relevant_image_url)
+        #     #logger.info(f"found {len(relevant_images_data)} relevant images for {code}")
+        #     for image in relevant_images_data:
+        #         update_image(monument, image, "commons")
+        #         commons_pics_collected += 1
+
+        if monument_data.get("commons_n"):
+            for cat in monument_data.get("commons_n"):
+                commons_image_data = search_commons_cat(cat)
+                for image in commons_image_data:
+                    title = image.get("title", "")
+                    if title:
+                        title = title.split("File:")[-1]
+                    else:
+                        continue
+                    
+                    is_relevant = False
+                    for relevant_image_url in relevant_images:
+                        file_path = relevant_image_url.split("FilePath/")[-1]
+                        if title == file_path:
+                            is_relevant = True
+                            break
+                    update_image(monument, image, "commons", is_relevant)
 
         if wlm_n:
             images = search_commons_wlm(wlm_n)
