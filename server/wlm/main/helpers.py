@@ -391,7 +391,7 @@ def get_administrative_areas(position, admin_entity=None):
     if admin_entity is not None:
         municipalities = get_wikidata_municipalities()
         if admin_entity in municipalities:
-            municipality_istat = municipalities[admin_entity]
+            municipality_istat = int(municipalities[admin_entity])
             try:
                 municipality = Municipality.objects.get(
                    code=municipality_istat,
