@@ -1,0 +1,68 @@
+SELECT DISTINCT
+
+  ?mon ?monLabel
+  ?locationLabel
+  ?article
+
+  (group_concat(DISTINCT ?parent; separator=";") as ?parent_n)
+  (group_concat(DISTINCT ?geo; separator=";") as ?geo_n)
+  (group_concat(DISTINCT ?place; separator=";") as ?place_n)
+  (group_concat(DISTINCT ?place_geo; separator=";") as ?place_geo_n)
+  (group_concat(DISTINCT ?wlm; separator=";") as ?wlm_n)
+  (group_concat(DISTINCT ?start; separator=";") as ?start_n)
+  (group_concat(DISTINCT ?end; separator=";") as ?end_n)
+  (group_concat(DISTINCT ?approvedBy; separator=";") as ?approvedBy_n)
+  (group_concat(DISTINCT ?relevantImage; separator=";") as ?relevantImage_n)
+  (group_concat(DISTINCT ?commonsCat; separator=";") as ?commons_n)
+  (SAMPLE(?address) as ?address)
+  (SAMPLE(?adminEntity) as ?adminEntity)
+  (SAMPLE(?location) as ?location)
+
+WHERE {
+  VALUES ?endorsements {
+    wd:Q112244655
+    wd:Q620027
+  }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "it, [AUTO_LANGUAGE]". }
+  
+  # seleziona i monumenti partecipanti a WLM in Italia
+  ?mon wdt:P131* wd:Q38;
+        p:P2186 ?wlms.
+        
+  # seleziona solo i monumenti con endorsement relativi agli edifici religiosi
+  ?wlms pq:P8001 ?endorsements.
+  
+  # esclude i comuni dalla lista
+  MINUS { ?mon wdt:P31 wd:Q747074. }
+  MINUS { ?mon wdt:P31 wd:Q954172. }
+  
+  ?wlms ps:P2186 ?wlm.
+  
+  OPTIONAL { ?wlms pq:P580 ?start . }
+  OPTIONAL { ?wlms pq:P582 ?end . }
+  OPTIONAL { ?wlms pq:P790 ?approvedBy. }
+  
+  OPTIONAL { ?mon wdt:P625 ?geo . }
+  OPTIONAL {
+    ?mon wdt:P131 ?place .
+    OPTIONAL {
+      ?place wdt:P625 ?place_geo .
+    }
+  }
+  
+  OPTIONAL { ?mon wdt:P361 ?parent }
+  OPTIONAL { ?mon wdt:P18 ?relevantImage . }
+  OPTIONAL { ?mon wdt:P373 ?commonsCat . }
+
+  OPTIONAL { ?mon wdt:P276 ?location . }
+  OPTIONAL {
+    ?article schema:about ?mon.
+    FILTER REGEX(STR(?article), ".it.wikipedia.org/wiki/") .
+  }
+  OPTIONAL { ?mon wdt:P131 ?adminEntity . }
+  OPTIONAL { ?mon wdt:P6375 ?address . }
+  
+}
+
+GROUP BY ?mon ?monLabel ?locationLabel ?article
+ORDER BY ?monLabel

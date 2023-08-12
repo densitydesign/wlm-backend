@@ -16,7 +16,8 @@ def load_wiki_candidate_types():
     file_path = CURRENT_DIR / "WIKI_CANDIDATE_TYPES.csv"
     with open(file_path, "r") as f:
         reader = csv.DictReader(f, delimiter=",")
-        return list(reader)
+        #allowing comments...
+        return [x for x in list(reader) if not x.get("q_number").startswith("#")]
 
 
 WIKI_CANDIDATE_TYPES = load_wiki_candidate_types()
@@ -25,6 +26,7 @@ WLM_QUERIES = [
     {"label": "in contest", "query_file" : "SPARQL-contest.txt", "q_number": "W0", "group": "Contest"},
     {"label": "municipality overview picture", "query_file" : "SPARQL-municipalities-views.txt", "q_number": "W1", "group": "Contest"},
     {"label": "fortificazioni (IIC 2022)", "query_file" : "SPARQL-fortifications.txt", "q_number": "W2", "group": "Contest"},
+    {"label": "religious building", "query_file" : "SPARQL-religious-buildings.txt", "q_number": "W3", "group": "Typology"},
 ]
 
 def get_wlm_query(query_file):
