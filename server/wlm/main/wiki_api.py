@@ -26,7 +26,7 @@ WLM_QUERIES = [
     {"label": "in contest", "query_file" : "SPARQL-contest.txt", "q_number": "W0", "group": "Contest"},
     {"label": "municipality overview picture", "query_file" : "SPARQL-municipalities-views.txt", "q_number": "W1", "group": "Contest"},
     {"label": "fortificazioni (IIC 2022)", "query_file" : "SPARQL-fortifications.txt", "q_number": "W2", "group": "Contest"},
-    {"label": "religious building", "query_file" : "SPARQL-religious-buildings.txt", "q_number": "W3", "group": "Typology"},
+    {"label": "religious building", "query_file" : "SPARQL-religious-buildings.txt", "q_number": "W3", "group": "Contest"},
 ]
 
 def get_wlm_query(query_file):
