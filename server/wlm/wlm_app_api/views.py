@@ -20,9 +20,12 @@ from rest_framework.permissions import IsAuthenticated
 from oauth.models import OAuth2Token
 from oauth.views import oauth
 from .serializers import (
-    MonumentAppDetailSerialier, MonumentAppDetailNoContestSerialier,
-    MonumentAppListSerializer, MonumentAppListNoContestSerializer,
-    UploadImagesSerializer, ContestSerializer
+    MonumentAppDetailSerialier,
+    MonumentAppDetailNoContestSerialier,
+    MonumentAppListSerializer,
+    MonumentAppListNoContestSerializer,
+    UploadImagesSerializer,
+    ContestSerializer,
 )
 from django.utils import timezone
 from uuid import uuid4
@@ -38,7 +41,7 @@ class StandardResultsSetPagination(PageNumberPagination):
 
 class MonumentFilter(filters.FilterSet):
     only_without_pictures = filters.BooleanFilter(label="only_without_pictures", method="filter_only_without_pictures")
-    in_contest =  filters.BooleanFilter(label="in_contest", method="filter_in_contest")
+    in_contest = filters.BooleanFilter(label="in_contest", method="filter_in_contest")
     category = filters.CharFilter(method="filter_category")
 
     def filter_category(self, queryset, name, value):
@@ -55,7 +58,7 @@ class MonumentFilter(filters.FilterSet):
             return queryset.filter(pictures_count=0)
         else:
             return queryset
-        
+
     def filter_in_contest(self, queryset, name, value):
         active_contests = Contest.get_active()
         if active_contests:
@@ -67,7 +70,6 @@ class MonumentFilter(filters.FilterSet):
             if value:
                 return queryset.none()
             return queryset
-
 
     class Meta:
         model = Monument
@@ -108,17 +110,14 @@ class MonumentAppViewSet(viewsets.ReadOnlyModelViewSet):
     def get_serializer_class(self):
         active_contests = Contest.get_active()
         if active_contests:
-
             if self.action == "retrieve":
                 return MonumentAppDetailSerialier
             return MonumentAppListSerializer
-        
+
         else:
             if self.action == "retrieve":
                 return MonumentAppDetailNoContestSerialier
             return MonumentAppListNoContestSerializer
-        
-        
 
     @action(detail=True, methods=["get"], url_path="upload-categories")
     def upload_categories(self, request, pk=None):
@@ -234,6 +233,11 @@ class ClusterMonumentsApi(APIView):
         in_contest = request.query_params.get("in_contest", None)
         category = request.query_params.get("category", None)
 
+
+        active_contests = Contest.get_active()
+
+
+
         if float(resolution) > 1000:
             # grouping by region
             # looking for cache first
@@ -241,7 +245,7 @@ class ClusterMonumentsApi(APIView):
             last_snapshot = Snapshot.objects.filter(complete=True).order_by("-created").first()
             if last_snapshot:
                 cache_key = f"cluster_region_{last_snapshot.pk}_" + str(request.query_params)
-                #look for cache
+                # look for cache
                 cached = cache.get(cache_key)
                 if cached:
                     return Response(cached)
@@ -257,7 +261,10 @@ class ClusterMonumentsApi(APIView):
             if only_without_pictures:
                 qs = qs.filter(pictures_count=0)
             if in_contest:
-                qs = qs.filter(in_contest=True)
+                if active_contests:
+                    qs = qs.filter(in_contest=True)
+                else:
+                    qs = qs.none()
             if category:
                 app_category = AppCategory.objects.get(name__iexact=category)
                 if not app_category:
@@ -270,9 +277,9 @@ class ClusterMonumentsApi(APIView):
                 position=models.functions.AsGeoJSON(models.functions.Transform("region__centroid", 3857)),
             ).values("ids", "position", "region__name")
             out = Response(qs_to_featurecollection(qs))
-            #caching
+            # caching
             if cache_key:
-                cache.set(cache_key, out.data, 60*60*24*30)
+                cache.set(cache_key, out.data, 60 * 60 * 24 * 30)
             return out
 
         if float(resolution) > 300:
@@ -281,11 +288,11 @@ class ClusterMonumentsApi(APIView):
             last_snapshot = Snapshot.objects.filter(complete=True).order_by("-created").first()
             if last_snapshot:
                 cache_key = f"cluster_province_{last_snapshot.pk}_" + str(request.query_params)
-                #look for cache
+                # look for cache
                 cached = cache.get(cache_key)
                 if cached:
                     return Response(cached)
-                
+
             qs = (
                 Monument.objects.filter(position__isnull=False)
                 .select_related("province")
@@ -297,7 +304,10 @@ class ClusterMonumentsApi(APIView):
             if only_without_pictures:
                 qs = qs.filter(pictures_count=0)
             if in_contest:
-                qs = qs.filter(in_contest=True)
+                if active_contests:
+                    qs = qs.filter(in_contest=True)
+                else:
+                    qs = qs.none()
             if category:
                 app_category = AppCategory.objects.get(name__iexact=category)
                 if not app_category:
@@ -310,13 +320,12 @@ class ClusterMonumentsApi(APIView):
                 position=models.functions.AsGeoJSON(models.functions.Transform("province__centroid", 3857)),
             ).values("ids", "position", "province__name")
             out = Response(qs_to_featurecollection(qs))
-            #caching
+            # caching
             if cache_key:
-                cache.set(cache_key, out.data, 60*60*24*30)
+                cache.set(cache_key, out.data, 60 * 60 * 24 * 30)
             return out
 
-        
-        #"fake" clustering
+        # "fake" clustering
         eps = get_eps_for_resolution(float(resolution))
 
         filter_condition = ""
@@ -325,7 +334,11 @@ class ClusterMonumentsApi(APIView):
         if only_without_pictures:
             filter_condition += f" AND (pictures_count = 0 OR pictures_count IS NULL)"
         if in_contest:
-            filter_condition += f" AND in_contest = True"
+            if active_contests:
+                filter_condition += f" AND in_contest = True"
+            else:
+                filter_condition += f" AND False"
+            
         if category:
             app_category = AppCategory.objects.get(name__iexact=category)
             if not app_category:
@@ -420,12 +433,12 @@ class UploadImageView(APIView):
             # COMPUTE CATEGORIES
             wlm_categories = []
             non_wlm_categories = []
-            
+
             try:
                 categories = get_upload_categories(monument.q_number) or {}
             except Exception as e:
                 categories = {}
-            
+
             # uploadurl_wlm = urls.get("uploadurl", "")
             # uploadurl_nonwlm = urls.get("nonwlmuploadurl", "")
             # if uploadurl_wlm and "categories=" in uploadurl_wlm:
@@ -438,17 +451,19 @@ class UploadImageView(APIView):
             #     non_wlm_categories = [f"[[Category:{cat}]]" for cat in queryparams["categories"][0].split("|")]
             wlm_categories = [f"[[Category:{cat}]]" for cat in categories.get("wlm_categories", [])]
             non_wlm_categories = [f"[[Category:{cat}]]" for cat in categories.get("non_wlm_categories", [])]
-            
-            
+
             # GENERATE TEXT
             text = "== {{int:filedesc}} ==\n"
             text += "{{Information\n"
-            text += "|description={{it|1=%s}}{{Monumento italiano|%s|anno=%s}}{{Load via app WLM.it|year=%s|source=%s}}\n" % (
-                description,
-                str(monument.wlm_n),
-                str(date.year),
-                year,
-                platform,
+            text += (
+                "|description={{it|1=%s}}{{Monumento italiano|%s|anno=%s}}{{Load via app WLM.it|year=%s|source=%s}}\n"
+                % (
+                    description,
+                    str(monument.wlm_n),
+                    str(date.year),
+                    year,
+                    platform,
+                )
             )
             text += "|date=%s\n" % (date_text,)
             text += "|source={{own}}\n"
@@ -544,8 +559,7 @@ class PersonalContributionsView(APIView):
         return Response(images)
 
 
-
-class CurrentContests(APIView):
+class CurrentContestsView(APIView):
     def get(self, request, *args, **kwargs):
         now = timezone.now()
         active_contests = Contest.get_active()
