@@ -1,5 +1,5 @@
 from django.contrib.gis.db import models
-
+from django.utils import timezone
 
 class Snapshot(models.Model):
     created = models.DateTimeField(auto_now_add=True)
@@ -148,6 +148,7 @@ class Monument(models.Model):
             ('start', 'first_revision'),
             ('start', 'first_revision', 'first_image_date'),
         ]    
+        ordering = ['label']
 
     def __str__(self):
         return self.label
@@ -192,3 +193,19 @@ class AppCategory(models.Model):
 
     def __str__(self):
         return self.name
+    
+
+
+class Contest(models.Model):
+    label = models.CharField(max_length=200)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    description = models.TextField(blank=True, default="")
+    link = models.URLField(max_length=2000, blank=True, default="")
+
+
+    @classmethod
+    def get_active(cls):
+        now = timezone.now()
+        return Contest.objects.filter(start_date__lte=now, end_date__gte=now)
+        

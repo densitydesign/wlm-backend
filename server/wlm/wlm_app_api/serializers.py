@@ -1,11 +1,11 @@
-from main.models import Monument, Picture
+from main.models import Monument, Picture, Contest
 from rest_framework import serializers
 from rest_framework_gis.serializers import GeometryField, GeoFeatureModelSerializer, GeometrySerializerMethodField
 from django.db import models
 from .helpers import get_upload_categories
 import json
 
-class MonumentAppListSerialier(serializers.ModelSerializer):
+class MonumentAppListSerializer(serializers.ModelSerializer):
     municipality_label = serializers.CharField(source="municipality.name", read_only=True)
     app_category = serializers.SerializerMethodField()  
     distance = serializers.FloatField(read_only=True, required=False, source="distance.km")
@@ -36,6 +36,18 @@ class MonumentAppListSerialier(serializers.ModelSerializer):
     class Meta:
         model = Monument
         fields = ['id', 'label', 'municipality_label', 'municipality', 'pictures_wlm_count', 'pictures_count', 'in_contest', "app_category", "distance", "address", "location", "position"]
+
+class MonumentAppListNoContestSerializer(MonumentAppListSerializer):
+
+    in_contest = serializers.SerializerMethodField()
+    
+    def get_in_contest(self, obj):
+        return False
+    class Meta:
+        model = Monument
+        fields = ['id', 'label', 'municipality_label', 'municipality', 'pictures_wlm_count', 'pictures_count', 'in_contest', "app_category", "distance", "address", "location", "position"]
+
+
 
 
 class PictureSerializer(serializers.ModelSerializer):
@@ -112,6 +124,16 @@ class MonumentAppDetailSerialier(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class MonumentAppDetailNoContestSerialier(MonumentAppDetailSerialier):
+    in_contest = serializers.SerializerMethodField()
+    
+    def get_in_contest(self, obj):
+        return False
+    class Meta:
+        model = Monument
+        fields = "__all__"
+
+
 class ClusterSerializer(serializers.Serializer):
     position = serializers.SerializerMethodField()
 
@@ -145,3 +167,9 @@ class UploadImageSerializer(serializers.Serializer):
 class UploadImagesSerializer(serializers.Serializer):
     images = UploadImageSerializer(many=True)
     platform = serializers.CharField(required=False, default="desktop")
+
+
+class ContestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Contest
+        fields = "__all__"

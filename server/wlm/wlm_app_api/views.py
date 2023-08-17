@@ -7,7 +7,7 @@ from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db import models
 from django_filters import rest_framework as filters
-from main.models import AppCategory, Monument, Picture, Snapshot
+from main.models import AppCategory, Monument, Picture, Snapshot, Contest
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
@@ -19,7 +19,11 @@ from rest_framework.permissions import IsAuthenticated
 
 from oauth.models import OAuth2Token
 from oauth.views import oauth
-from .serializers import MonumentAppDetailSerialier, MonumentAppListSerialier, UploadImagesSerializer
+from .serializers import (
+    MonumentAppDetailSerialier, MonumentAppDetailNoContestSerialier,
+    MonumentAppListSerializer, MonumentAppListNoContestSerializer,
+    UploadImagesSerializer, ContestSerializer
+)
 from django.utils import timezone
 from uuid import uuid4
 from urllib.parse import urlparse, parse_qs
@@ -34,6 +38,7 @@ class StandardResultsSetPagination(PageNumberPagination):
 
 class MonumentFilter(filters.FilterSet):
     only_without_pictures = filters.BooleanFilter(label="only_without_pictures", method="filter_only_without_pictures")
+    in_contest =  filters.BooleanFilter(label="in_contest", method="filter_in_contest")
     category = filters.CharFilter(method="filter_category")
 
     def filter_category(self, queryset, name, value):
@@ -50,17 +55,30 @@ class MonumentFilter(filters.FilterSet):
             return queryset.filter(pictures_count=0)
         else:
             return queryset
+        
+    def filter_in_contest(self, queryset, name, value):
+        active_contests = Contest.get_active()
+        if active_contests:
+            if value:
+                return queryset.filter(in_contest=True)
+            else:
+                return queryset.filter(in_contest=False)
+        else:
+            if value:
+                return queryset.none()
+            return queryset
+
 
     class Meta:
         model = Monument
-        fields = ["municipality", "pictures_count", "in_contest"]
+        fields = ["municipality", "pictures_count"]
 
 
 class MonumentAppViewSet(viewsets.ReadOnlyModelViewSet):
     """ """
 
     queryset = Monument.objects.all().select_related("municipality")
-    serializer_class = MonumentAppListSerialier
+    serializer_class = MonumentAppListSerializer
     pagination_class = StandardResultsSetPagination
     filter_backends = [
         filters.DjangoFilterBackend,
@@ -88,9 +106,19 @@ class MonumentAppViewSet(viewsets.ReadOnlyModelViewSet):
         return qs
 
     def get_serializer_class(self):
-        if self.action == "retrieve":
-            return MonumentAppDetailSerialier
-        return super().get_serializer_class()
+        active_contests = Contest.get_active()
+        if active_contests:
+
+            if self.action == "retrieve":
+                return MonumentAppDetailSerialier
+            return MonumentAppListSerializer
+        
+        else:
+            if self.action == "retrieve":
+                return MonumentAppDetailNoContestSerialier
+            return MonumentAppListNoContestSerializer
+        
+        
 
     @action(detail=True, methods=["get"], url_path="upload-categories")
     def upload_categories(self, request, pk=None):
@@ -514,3 +542,12 @@ class PersonalContributionsView(APIView):
         print(data)
         images = list(data["query"]["pages"].values())
         return Response(images)
+
+
+
+class CurrentContests(APIView):
+    def get(self, request, *args, **kwargs):
+        now = timezone.now()
+        active_contests = Contest.get_active()
+        ser = ContestSerializer(active_contests, many=True)
+        return Response(ser.data)
