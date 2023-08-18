@@ -496,7 +496,7 @@ def update_monument(
         q_number=code,
         defaults=defaults
     )
-    
+    monument.categories.clear()
     monument.categories.add(category)
 
     if reset_pictures:

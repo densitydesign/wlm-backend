@@ -164,12 +164,13 @@ class UploadImageSerializer(serializers.Serializer):
     monument_id = serializers.CharField()
 
 
-    # def validate_title(self, value):
-    #     candidates = '·	ç+-"£%&?,.:;#°§@[]{}()~/\|'
-    #     for x in candidates:
-    #         if x in value:
-    #             raise serializers.ValidationError("Title too long")
-    #     return value
+    def validate_title(self, value):
+        #candidates = '·	ç+-"£%&?,.:;#°§@[]{}()~/\|'
+        candidates = '·	ç"£%'
+        for x in candidates:
+            if x in value:
+                raise serializers.ValidationError("Bad title")
+        return value
 
 
 class UploadImagesSerializer(serializers.Serializer):
