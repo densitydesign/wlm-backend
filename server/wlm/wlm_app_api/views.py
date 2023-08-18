@@ -411,7 +411,19 @@ class UploadImageView(APIView):
         all_results = []
         did_fail = False
 
+        try:
+            csrf_res = oauth.mediawiki.get(
+                settings.URL_ACTION_API,
+                params={"action": "query", "meta": "tokens", "format": "json", "type": "csrf"},
+                token=oauth_token.to_token(),
+            )
+            csrf_res.raise_for_status()
+            csrf_token = csrf_res.json()["query"]["tokens"]["csrftoken"]
+        except Exception as e:
+            raise APIException("Errore di autenticazione: riprova ad effettuare il login")
+
         for uploaded_image in ser.validated_data["images"]:
+
             title = uploaded_image["title"]
             image = uploaded_image["image"]
             description = uploaded_image["description"]
@@ -423,13 +435,7 @@ class UploadImageView(APIView):
             title = f"File:{title}{ext}"
             # TODO CHECK EXISTENCE
             # GRAB CSRF TOKEN
-            csrf_res = oauth.mediawiki.get(
-                settings.URL_ACTION_API,
-                params={"action": "query", "meta": "tokens", "format": "json", "type": "csrf"},
-                token=oauth_token.to_token(),
-            )
-            csrf_res.raise_for_status()
-            csrf_token = csrf_res.json()["query"]["tokens"]["csrftoken"]
+            
             # COMPUTE CATEGORIES
             wlm_categories = []
             non_wlm_categories = []
@@ -499,6 +505,7 @@ class UploadImageView(APIView):
                 headers={"Authorization": f"Bearer {oauth_token.access_token}"},
                 token=oauth_token.to_token(),
             )
+            
             if upload_res.ok:
                 upload_res_data = upload_res.json()
                 if "error" in upload_res_data:

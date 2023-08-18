@@ -165,11 +165,11 @@ class UploadImageSerializer(serializers.Serializer):
 
 
     def validate_title(self, value):
-        #candidates = '·	ç+-"£%&?,.:;#°§@[]{}()~/\|'
-        candidates = '·	ç"£%'
+        candidates = '·	ç+"£%&?,;#°§@[]{}()~/\|'
+        #candidates = '·	ç"£%'
         for x in candidates:
             if x in value:
-                raise serializers.ValidationError("Bad title")
+                raise serializers.ValidationError("Il titolo contiene caratteri non validi: " + x)
         return value
 
 
