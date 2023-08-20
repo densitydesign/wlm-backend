@@ -2,8 +2,7 @@ SELECT DISTINCT
 
   ?mon ?monLabel
   ?locationLabel
-  ?article
-
+  
   (group_concat(DISTINCT ?parent; separator=";") as ?parent_n)
   (group_concat(DISTINCT ?geo; separator=";") as ?geo_n)
   (group_concat(DISTINCT ?place; separator=";") as ?place_n)
@@ -17,6 +16,7 @@ SELECT DISTINCT
   (SAMPLE(?address) as ?address)
   (SAMPLE(?adminEntity) as ?adminEntity)
   (SAMPLE(?location) as ?location)
+  (SAMPLE(?article) as ?article)
 
 WHERE {
   VALUES ?endorsements {
@@ -64,5 +64,5 @@ WHERE {
   
 }
 
-GROUP BY ?mon ?monLabel ?locationLabel ?article
+GROUP BY ?mon ?monLabel ?locationLabel
 ORDER BY ?monLabel

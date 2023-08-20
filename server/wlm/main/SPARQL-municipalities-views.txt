@@ -3,8 +3,6 @@ SELECT DISTINCT
   ?mon ?monLabel
   #?locationLabel
   
-  ?article
-
   #(group_concat(DISTINCT ?parent; separator=";") as ?parent_n)
   (group_concat(DISTINCT ?geo; separator=";") as ?geo_n)
   (group_concat(DISTINCT ?place; separator=";") as ?place_n)
@@ -17,6 +15,7 @@ SELECT DISTINCT
   (group_concat(DISTINCT ?commonsCat; separator=";") as ?commons_n)
   (SAMPLE(?address) as ?address)
   (SAMPLE(?adminEntity) as ?adminEntity)
+  (SAMPLE(?article) as ?article)
 
 WHERE {
   SERVICE wikibase:label { bd:serviceParam wikibase:language "it, [AUTO_LANGUAGE]". }
@@ -57,5 +56,5 @@ WHERE {
 
 }
 
-GROUP BY ?mon ?monLabel ?article
+GROUP BY ?mon ?monLabel
 ORDER BY ?monLabel

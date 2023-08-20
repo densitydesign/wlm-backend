@@ -634,8 +634,8 @@ def get_category_snapshot_payload(cat_snapshot):
 
             @retry(tries=5, delay=25)
             def inner_call():
-                results = execute_query(cat_snapshot.query, limit=10000, offset=offset)
-                return results
+                out = execute_query(cat_snapshot.query, limit=10000, offset=offset)
+                return out
 
             results = inner_call()
             
