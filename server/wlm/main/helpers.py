@@ -632,9 +632,9 @@ def get_category_snapshot_payload(cat_snapshot):
         while should_run:
             logger.info(f"offset {offset}")
 
-            @retry(tries=5, delay=25)
+            @retry(tries=10, delay=25)
             def inner_call():
-                out = execute_query(cat_snapshot.query, limit=10000, offset=offset)
+                out = execute_query(cat_snapshot.query, limit=8000, offset=offset)
                 return out
 
             results = inner_call()
@@ -642,10 +642,10 @@ def get_category_snapshot_payload(cat_snapshot):
             run_data = results["results"]["bindings"]
             data += run_data
 
-            if len(run_data) < 10000:
+            if len(run_data) < 8000:
                 should_run = False
             else:
-                offset += 10000
+                offset += 8000
             
         logger.info("query ok")
         cat_snapshot.payload = data
