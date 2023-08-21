@@ -777,8 +777,28 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
 
     all_q_numbers = []
     
-    has_errors = False
+    cats_errors = []
+    #trying first to get the payload for all the categories
+    for cat_snapshot in categories_snapshots:        
+        if not cat_snapshot.payload:
+            try:
+                get_category_snapshot_payload(cat_snapshot)
+            except Exception as e:
+                logger.exception("Error while getting category snapshot payload")
+                CategorySnapshotError.objects.create(
+                    snapshot = cat_snapshot.snapshot,
+                    category_name = cat_snapshot.category.label,
+                    category_query = cat_snapshot.query,
+                    error = str(e),
+                    
+                )
+                cats_errors.append(cat_snapshot.category.label)
     
+    # updating categories.
+    # the method process_category_snapshot will retry to get payload if not present
+    # this is useful for debugging, as it allows to run the method multiple times without restarting all the snapshot
+    # by removing the payload by the category snapshots.
+
     for cat_snapshot in categories_snapshots:        
         if not cat_snapshot.complete:
             try:
@@ -791,8 +811,12 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
                 )
                 cat_snapshot.complete = True
                 cat_snapshot.save()
+                if cat_snapshot.category.label not in cats_errors:
+                    cats_errors = [x for x in cats_errors if x != cat_snapshot.category.label]
+            
             except Exception as e: 
-                has_errors = True
+                if cat_snapshot.category.label not in cats_errors:
+                    cats_errors.append(cat_snapshot.category.label)
                 continue
         
         monuments_data = [format_monument(x) for x in cat_snapshot.payload]
@@ -802,6 +826,7 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
     #logger.info("exiting for debug")
     #return
 
+    has_errors = len(cats_errors) > 0
 
     if not has_errors:
         #deleting monuments that are not referenced by sparql. 
@@ -816,17 +841,17 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
         logger.info("updating geo")
         update_geo_from_parents()
 
-    snapshot.complete = True
-    snapshot.save()
-    snapshot.category_snapshots.all().delete()
-
-    #dropping old monuments .. should have be dropped in advance by the previous procedure
     if not has_errors:
+        snapshot.complete = True
+        snapshot.save()
+        snapshot.category_snapshots.all().delete()
+
+        #dropping old monuments .. should have be dropped in advance by the previous procedure
+    
         logger.info(f"deleting monuments missing in snapshot")
         Monument.objects.exclude(snapshot__pk=snapshot.pk).delete()
 
-    # creating csv and xlsx full exports
-    if not has_errors:
+        # creating csv and xlsx full exports
         create_export(snapshot)
 
     # clearing view cache
