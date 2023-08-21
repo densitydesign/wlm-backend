@@ -617,7 +617,7 @@ def update_category(
             )
         except Exception as e:
             logger.exception(e)
-
+    print(monuments)
     Parallel(n_jobs=6, prefer="threads")(delayed(process_monument)(mon) for mon in monuments)
 
 
@@ -675,8 +675,16 @@ def process_category_snapshot(
     #return 
 
     monuments = [format_monument(x) for x in cat_snapshot.payload]
-    logger.info(f"resetting category {cat_snapshot.category.label}")
-    Monument.categories.through.objects.filter(category=cat_snapshot.category).delete()
+    monuments_q_numbers = [x.get('mon', None) for x in monuments]
+    monuments_q_numbers = [x for x in monuments_q_numbers if x is not None]
+    logger.info(f"found {len(monuments_q_numbers)} monuments for {cat_snapshot.category.label}")
+
+    logger.info(f"removing category {cat_snapshot.category.label} for not matched monuments")
+    Monument.categories.through.objects.filter(
+        category=cat_snapshot.category,
+    ).exclude(
+        monument__q_number__in=monuments_q_numbers
+    ).delete()
         
     update_category(
         monuments,
@@ -811,7 +819,7 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
                 )
                 cat_snapshot.complete = True
                 cat_snapshot.save()
-                if cat_snapshot.category.label not in cats_errors:
+                if cat_snapshot.category.label in cats_errors:
                     cats_errors = [x for x in cats_errors if x != cat_snapshot.category.label]
             
             except Exception as e: 
@@ -823,9 +831,6 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
         qs = [x.get('mon', None) for x in monuments_data]
         all_q_numbers += list(set(qs))
         
-    #logger.info("exiting for debug")
-    #return
-
     has_errors = len(cats_errors) > 0
 
     if not has_errors:
@@ -837,7 +842,7 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
     
 
     # fixing empty positions
-    if not skip_geo:
+    if not skip_geo and not has_errors:
         logger.info("updating geo")
         update_geo_from_parents()
 
@@ -847,15 +852,14 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
         snapshot.category_snapshots.all().delete()
 
         #dropping old monuments .. should have be dropped in advance by the previous procedure
-    
         logger.info(f"deleting monuments missing in snapshot")
         Monument.objects.exclude(snapshot__pk=snapshot.pk).delete()
 
         # creating csv and xlsx full exports
         create_export(snapshot)
 
-    # clearing view cache
-    caches["views"].clear()
+        # clearing view cache
+        caches["views"].clear()
 
 
 def download_extract_zip(url):
