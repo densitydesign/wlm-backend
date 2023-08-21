@@ -648,9 +648,8 @@ def get_category_snapshot_payload(cat_snapshot):
                 should_run = False
             else:
                 offset += 5000
-                #sleeping 10 seconds
-                logger.info("sleeping 10 seconds")
-                time.sleep(10)
+                logger.info("sleeping 15 seconds")
+                time.sleep(15)
             
         logger.info("query ok")
         cat_snapshot.payload = data
