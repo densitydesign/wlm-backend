@@ -56,8 +56,7 @@ def execute_query(query, limit=None, offset=None):
     try:
         return r.json()
     except Exception as e:
-        print(r.text)
-        raise e
+        raise Exception(r.text)
 
 
 def format_monument(monument):

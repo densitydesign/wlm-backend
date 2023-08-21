@@ -208,4 +208,14 @@ class Contest(models.Model):
     def get_active(cls):
         now = timezone.now()
         return Contest.objects.filter(start_date__lte=now, end_date__gte=now)
-        
+
+
+class CategorySnapshotError(models.Model):
+    snapshot = models.ForeignKey(Snapshot, models.CASCADE, related_name="errors")
+    category_name = models.CharField(max_length=200)
+    category_query = models.TextField()
+    error = models.TextField()
+    created = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.category_name} {self.snapshot}"

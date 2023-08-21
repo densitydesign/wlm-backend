@@ -10,6 +10,7 @@ from main.models import (
     Snapshot,
     AppCategory,
     Contest,
+    CategorySnapshotError,
 )
 
 admin.site.register(Region)
@@ -60,3 +61,4 @@ class MonumentAdmin(admin.ModelAdmin):
 admin.site.register(Monument, MonumentAdmin)
 admin.site.register(AppCategory)
 admin.site.register(Contest)
+admin.site.register(CategorySnapshotError)

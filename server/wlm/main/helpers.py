@@ -36,7 +36,7 @@ from main.wiki_api import (
     get_wlm_query,
     execute_query,
 )
-from main.models import Monument, Picture, Region, Province, Municipality, MunicipalityLookup,  Category, CategorySnapshot, Snapshot
+from main.models import Monument, Picture, Region, Province, Municipality, MunicipalityLookup,  Category, CategorySnapshot, Snapshot, CategorySnapshotError
 from main.serializers import ProvinceGeoSerializer, MunicipalityGeoSerializer, RegionGeoSerializer
 from django.contrib.gis.db.models.functions import Centroid
 from django.core.files import File
@@ -496,7 +496,8 @@ def update_monument(
         q_number=code,
         defaults=defaults
     )
-    monument.categories.clear()
+    
+    #categories are cleared by the method update_category
     monument.categories.add(category)
 
     if reset_pictures:
@@ -617,11 +618,11 @@ def update_category(
         except Exception as e:
             logger.exception(e)
 
-    Parallel(n_jobs=12, prefer="threads")(delayed(process_monument)(mon) for mon in monuments)
+    Parallel(n_jobs=6, prefer="threads")(delayed(process_monument)(mon) for mon in monuments)
 
 
 
-@retry(tries=5, delay=45)
+@retry(tries=1, delay=45)
 def get_category_snapshot_payload(cat_snapshot):
     logger.info(f"get_category_snapshot_payload {cat_snapshot.category.label}")
     if not cat_snapshot.payload:
@@ -632,9 +633,9 @@ def get_category_snapshot_payload(cat_snapshot):
         while should_run:
             logger.info(f"offset {offset}")
 
-            @retry(tries=10, delay=25)
+            @retry(tries=15, delay=25)
             def inner_call():
-                out = execute_query(cat_snapshot.query, limit=8000, offset=offset)
+                out = execute_query(cat_snapshot.query, limit=10000, offset=offset)
                 return out
 
             results = inner_call()
@@ -642,10 +643,10 @@ def get_category_snapshot_payload(cat_snapshot):
             run_data = results["results"]["bindings"]
             data += run_data
 
-            if len(run_data) < 8000:
+            if len(run_data) < 10000:
                 should_run = False
             else:
-                offset += 8000
+                offset += 10000
             
         logger.info("query ok")
         cat_snapshot.payload = data
@@ -657,8 +658,26 @@ def process_category_snapshot(
 ):
     logger.info(f"process_category_snapshot {cat_snapshot.category.label}")
     if not cat_snapshot.payload:
-        get_category_snapshot_payload(cat_snapshot)
+        try:
+            get_category_snapshot_payload(cat_snapshot)
+        except Exception as e:
+            logger.exception("Error while getting category snapshot payload")
+            CategorySnapshotError.objects.create(
+                snapshot = cat_snapshot.snapshot,
+                category_name = cat_snapshot.category.label,
+                category_query = cat_snapshot.query,
+                error = str(e),
+                
+            )
+            raise e
+    
+    #logger.info("exiting in debug, please remove")
+    #return 
+
     monuments = [format_monument(x) for x in cat_snapshot.payload]
+    logger.info(f"resetting category {cat_snapshot.category.label}")
+    Monument.categories.through.objects.filter(category=cat_snapshot.category).delete()
+        
     update_category(
         monuments,
         cat_snapshot,
@@ -757,34 +776,44 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
         categories_snapshots.append(cat_snapshot)
 
     all_q_numbers = []
-    for cat_snapshot in categories_snapshots:
-        get_category_snapshot_payload(cat_snapshot)
+    
+    has_errors = False
+    
+    for cat_snapshot in categories_snapshots:        
+        if not cat_snapshot.complete:
+            try:
+                process_category_snapshot(
+                    cat_snapshot,
+                    skip_pictures=skip_pictures,
+                    skip_geo=skip_geo,
+                    category_only=category_only,
+                    reset_pictures=reset_pictures,
+                )
+                cat_snapshot.complete = True
+                cat_snapshot.save()
+            except Exception as e: 
+                has_errors = True
+                continue
+        
         monuments_data = [format_monument(x) for x in cat_snapshot.payload]
         qs = [x.get('mon', None) for x in monuments_data]
         all_q_numbers += list(set(qs))
+        
+    #logger.info("exiting for debug")
+    #return
 
-    for cat_snapshot in categories_snapshots:        
-        if cat_snapshot.complete:
-            continue
-        process_category_snapshot(
-            cat_snapshot,
-            skip_pictures=skip_pictures,
-            skip_geo=skip_geo,
-            category_only=category_only,
-            reset_pictures=reset_pictures,
-        )
-        cat_snapshot.complete = True
-        cat_snapshot.save()
 
-    #deleting monuments that are not referenced by sparql. 
-    #could be a large query but postgres should handle it gracefully
-    monuments_to_delete = Monument.objects.exclude(q_number__in=all_q_numbers)
-    logger.info(f"deleting monuments missing in snapshot")
-    monuments_to_delete.delete()
+    if not has_errors:
+        #deleting monuments that are not referenced by sparql. 
+        #could be a large query but postgres should handle it gracefully
+        monuments_to_delete = Monument.objects.exclude(q_number__in=all_q_numbers)
+        logger.info(f"deleting monuments missing in snapshot")
+        monuments_to_delete.delete()
     
 
     # fixing empty positions
     if not skip_geo:
+        logger.info("updating geo")
         update_geo_from_parents()
 
     snapshot.complete = True
@@ -792,10 +821,13 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
     snapshot.category_snapshots.all().delete()
 
     #dropping old monuments .. should have be dropped in advance by the previous procedure
-    Monument.objects.exclude(snapshot__pk=snapshot.pk).delete()
+    if not has_errors:
+        logger.info(f"deleting monuments missing in snapshot")
+        Monument.objects.exclude(snapshot__pk=snapshot.pk).delete()
 
     # creating csv and xlsx full exports
-    create_export(snapshot)
+    if not has_errors:
+        create_export(snapshot)
 
     # clearing view cache
     caches["views"].clear()
