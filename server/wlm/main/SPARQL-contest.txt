@@ -14,7 +14,7 @@ SELECT DISTINCT
   (group_concat(DISTINCT ?relevantImage; separator=";") as ?relevantImage_n)
   (group_concat(DISTINCT ?commonsCat; separator=";") as ?commons_n)
   (SAMPLE(?address) as ?address)
-  (SAMPLE(?adminEntity) as ?adminEntity)
+  (SAMPLE(?place) as ?adminEntity)
   (SAMPLE(?location) as ?location)
 
 WHERE {
@@ -49,13 +49,9 @@ WHERE {
   OPTIONAL {
     ?article schema:about ?mon;
     schema:isPartOf <https://it.wikipedia.org/> .
-    #FILTER REGEX(STR(?article), ".it.wikipedia.org/wiki/") .
   }
-  OPTIONAL { ?mon wdt:P131 ?adminEntity . }
-  OPTIONAL { ?mon wdt:P6375 ?address . }
-  
+  OPTIONAL { ?mon wdt:P6375 ?address . }  
 
 }
 
 GROUP BY ?mon ?monLabel ?locationLabel ?article
-ORDER BY ?monLabel

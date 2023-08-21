@@ -15,7 +15,7 @@ SELECT DISTINCT
   (group_concat(DISTINCT ?relevantImage; separator=";") as ?relevantImage_n)
   (group_concat(DISTINCT ?commonsCat; separator=";") as ?commons_n)
   (SAMPLE(?address) as ?address)
-  (SAMPLE(?adminEntity) as ?adminEntity)
+  (SAMPLE(?place) as ?adminEntity)
   (SAMPLE(?location) as ?location)
 
 WHERE {
@@ -66,4 +66,4 @@ WHERE {
 }
 
 GROUP BY ?mon ?monLabel ?locationLabel ?article
-ORDER BY ?monLabel
+
