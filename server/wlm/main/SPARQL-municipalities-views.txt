@@ -3,6 +3,8 @@ SELECT DISTINCT
   ?mon ?monLabel
   #?locationLabel
   
+  ?article
+
   #(group_concat(DISTINCT ?parent; separator=";") as ?parent_n)
   (group_concat(DISTINCT ?geo; separator=";") as ?geo_n)
   (group_concat(DISTINCT ?place; separator=";") as ?place_n)
@@ -15,7 +17,6 @@ SELECT DISTINCT
   (group_concat(DISTINCT ?commonsCat; separator=";") as ?commons_n)
   (SAMPLE(?address) as ?address)
   (SAMPLE(?adminEntity) as ?adminEntity)
-  (SAMPLE(?article) as ?article)
 
 WHERE {
   SERVICE wikibase:label { bd:serviceParam wikibase:language "it, [AUTO_LANGUAGE]". }
@@ -47,8 +48,9 @@ WHERE {
 
   #OPTIONAL { ?mon wdt:P276 ?location . }
   OPTIONAL {
-    ?article schema:about ?mon .
-    FILTER REGEX(STR(?article), ".it.wikipedia.org/wiki/") .
+    ?article schema:about ?mon ;
+    schema:isPartOf <https://it.wikipedia.org/> .
+    #FILTER REGEX(STR(?article), ".it.wikipedia.org/wiki/") .
   }
   OPTIONAL { ?mon wdt:P131 ?adminEntity . }
   OPTIONAL { ?mon wdt:P6375 ?address . }
@@ -56,5 +58,5 @@ WHERE {
 
 }
 
-GROUP BY ?mon ?monLabel
+GROUP BY ?mon ?monLabel ?article
 ORDER BY ?monLabel
