@@ -1,4 +1,5 @@
 from cmath import inf
+import time                
 from retry import retry
 from django.core.paginator import Paginator
 import tempfile
@@ -647,6 +648,9 @@ def get_category_snapshot_payload(cat_snapshot):
                 should_run = False
             else:
                 offset += 5000
+                #sleeping 10 seconds
+                logger.info("sleeping 10 seconds")
+                time.sleep(10)
             
         logger.info("query ok")
         cat_snapshot.payload = data
