@@ -98,6 +98,7 @@ DATABASES = {
         "PASSWORD": "wlm",
         "HOST": "localhost",
         "PORT": "5433",
+        'CONN_MAX_AGE': 0,
     }
 }
 SPATIALITE_LIBRARY_PATH = "/usr/local/lib/mod_spatialite.dylib"

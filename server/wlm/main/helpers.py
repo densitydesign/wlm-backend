@@ -619,7 +619,7 @@ def update_category(
         except Exception as e:
             logger.exception(e)
     #print(monuments)
-    Parallel(n_jobs=8, prefer="threads")(delayed(process_monument)(mon) for mon in monuments)
+    Parallel(n_jobs=5, prefer="threads")(delayed(process_monument)(mon) for mon in monuments)
 
 
 
