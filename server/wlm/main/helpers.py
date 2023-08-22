@@ -618,8 +618,8 @@ def update_category(
             )
         except Exception as e:
             logger.exception(e)
-    print(monuments)
-    Parallel(n_jobs=6, prefer="threads")(delayed(process_monument)(mon) for mon in monuments)
+    #print(monuments)
+    Parallel(n_jobs=8, prefer="threads")(delayed(process_monument)(mon) for mon in monuments)
 
 
 
@@ -839,9 +839,9 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
     if not has_errors:
         #deleting monuments that are not referenced by sparql. 
         #could be a large query but postgres should handle it gracefully
-        monuments_to_delete = Monument.objects.exclude(q_number__in=all_q_numbers)
-        logger.info(f"deleting monuments missing in snapshot")
-        monuments_to_delete.delete()
+        #monuments_to_delete = Monument.objects.exclude(q_number__in=all_q_numbers)
+        logger.info(f"deleting monuments missing in snapshot -- disabled now")
+        #monuments_to_delete.delete()
     
 
     # fixing empty positions
@@ -855,8 +855,8 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
         snapshot.category_snapshots.all().delete()
 
         #dropping old monuments .. should have be dropped in advance by the previous procedure
-        logger.info(f"deleting monuments missing in snapshot")
-        Monument.objects.exclude(snapshot__pk=snapshot.pk).delete()
+        #logger.info(f"deleting monuments missing in snapshot")
+        #Monument.objects.exclude(snapshot__pk=snapshot.pk).delete()
 
         # creating csv and xlsx full exports
         create_export(snapshot)
