@@ -1,20 +1,20 @@
 q_number,label,group
-#Q11331347,calvary hill,Typology
-#Q2065736,cultural property,Typology
-#Q57821,fortification,Typology
-#Q1030034,GLAM,Typology
-#Q35112127,historic building,Typology
-#Q12131650,location of burial,Typology
-#Q4989906,monument,Typology
-#Q811534,monumental tree,Typology
-#Q15069452,Natura 2000 protected area,Typology
-#Q179049,natural reserve,Typology
-#Q16560,palace,Typology
-#Q57660343,performing art buildings,Typology
-#Q1291195,place of discovery,Typology
-#Q24398318,generic religious building,Typology
-#Q2232001,show cave,Typology
-#Q12518,tower,Typology
-#Q333109,Überrest,Typology
-#Q3950,villa,Typology
+Q11331347,calvary hill,Typology
+Q2065736,cultural property,Typology
+Q57821,fortification,Typology
+Q1030034,GLAM,Typology
+Q35112127,historic building,Typology
+Q12131650,location of burial,Typology
+Q4989906,monument,Typology
+Q811534,monumental tree,Typology
+Q15069452,Natura 2000 protected area,Typology
+Q179049,natural reserve,Typology
+Q16560,palace,Typology
+Q57660343,performing art buildings,Typology
+Q1291195,place of discovery,Typology
+Q24398318,generic religious building,Typology
+Q2232001,show cave,Typology
+Q12518,tower,Typology
+Q333109,Überrest,Typology
+Q3950,villa,Typology
 Q33506,museum,Typology
