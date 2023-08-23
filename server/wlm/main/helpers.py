@@ -593,18 +593,7 @@ def update_monument(
 def update_category(
     monuments, category_snapshot, skip_pictures=False, skip_geo=False, category_only=False, reset_pictures=False
 ):
-    # for monument in monuments:
-    #     try:
-    #         update_monument(
-    #             monument,
-    #             category_snapshot,
-    #             skip_pictures=skip_pictures,
-    #             skip_geo=skip_geo,
-    #             category_only=category_only,
-    #             reset_pictures=reset_pictures,
-    #         )
-    #     except Exception as e:
-    #         logger.exception(e)
+    
 
     def process_monument(monument):
         try:
@@ -619,7 +608,7 @@ def update_category(
         except Exception as e:
             logger.exception(e)
     #print(monuments)
-    Parallel(n_jobs=5, prefer="threads")(delayed(process_monument)(mon) for mon in monuments)
+    Parallel(n_jobs=3, prefer="threads")(delayed(process_monument)(mon) for mon in monuments)
 
 
 
@@ -688,9 +677,22 @@ def process_category_snapshot(
     ).exclude(
         monument__q_number__in=monuments_q_numbers
     ).delete()
+
+    
+    logger.info(f"adding category {cat_snapshot.category.label} for monuments already updated in the snapshot")
+    already_updated_monuments = Monument.objects.filter(
+        snapshot=cat_snapshot.snapshot,
+        q_number__in=monuments_q_numbers
+    )
+    for mon in already_updated_monuments:
+        mon.categories.add(cat_snapshot.category)
+
+    logger.info(f"filtering new monuments for {cat_snapshot.category.label}")
+    already_updated_monuments_q_numbers = [x.q_number for x in already_updated_monuments]
+    new_monuments = [x for x in monuments if x.get('mon', None) not in already_updated_monuments_q_numbers]
         
     update_category(
-        monuments,
+        new_monuments,
         cat_snapshot,
         skip_pictures=skip_pictures,
         skip_geo=skip_geo,
