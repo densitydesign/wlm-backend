@@ -59,7 +59,7 @@ def get_date_snap_wlm(monuments_qs, date, group=None):
             date=models.Value(date),
         )
         .annotate(
-            in_contest=models.Case(
+            in_contest_int=models.Case(
                 models.When(start__lte=date, photographed=0, then=models.Value(1)),
                 default=models.Value(0),
             )
@@ -83,7 +83,7 @@ def get_date_snap_wlm(monuments_qs, date, group=None):
         .order_by()
         .annotate(
             on_wiki=models.Sum("on_wiki", default=0),
-            in_contestx=models.Sum("in_contest", default=0),
+            in_contestx=models.Sum("in_contest_int", default=0),
             photographed=models.Sum("photographed", default=0),
         )
         .annotate(
