@@ -50,7 +50,7 @@ class MonumentFilter(filters.FilterSet):
             if not app_category:
                 return queryset.none()
             categories_pks = app_category.categories.values_list("pk", flat=True)
-            return queryset.filter(categories__pk__in=categories_pks)
+            return queryset.filter(categories__pk__in=categories_pks).distinct()
         return queryset
 
     def filter_only_without_pictures(self, queryset, name, value):
