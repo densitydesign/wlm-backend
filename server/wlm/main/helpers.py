@@ -577,10 +577,17 @@ def update_monument(
         if not monument.end:
             monument.in_contest = True
         else:
-            monument.in_contest = monument.end < monument.start
+            try:
+                today = date.today().isoformat()
+                if str(monument.end) >= today:
+                    monument.in_contest = True
+                else:
+                    monument.in_contest = monument.end < monument.start
+            except Exception as e:
+                monument.in_contest = monument.end < monument.start
     
     monument.save()
-
+    
     return monument
 
 
