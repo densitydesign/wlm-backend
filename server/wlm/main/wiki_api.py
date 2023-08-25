@@ -129,7 +129,7 @@ def search_commons_url(url):
     return out 
 
 
-def search_commons_wlm(wlm_id):
+def search_commons_wlm(q_number, wlm_id):
     params = {
         "action": "query",
         "format": "json",
@@ -153,7 +153,7 @@ def search_commons_wlm(wlm_id):
                 temp_obj = {}
                 
                 if "pageid" in image:
-                    temp_obj["pageid"] = image["pageid"]
+                    temp_obj["pageid"] = str(image["pageid"]) + q_number
                 if "title" in image:
                     temp_obj["title"] = image["title"]
                 if "imageinfo" in image and len(image["imageinfo"]) > 0 and "extmetadata" in image["imageinfo"][0]:
@@ -181,7 +181,7 @@ def search_commons_wlm(wlm_id):
 
 
 
-def search_commons_cat(cat):    
+def search_commons_cat(q_number, cat):    
 
     #filename = url.split("FilePath/")[-1]
     payload = {
@@ -205,11 +205,13 @@ def search_commons_cat(cat):
         data = r.json()
         
         if "query" in data and "pages" in data["query"] and len(data["query"]["pages"]) > 0:
+
             for pageid in data["query"]["pages"]:
                 image = data["query"]["pages"][str(pageid)]
                 temp_obj = {}
                 if "pageid" in image:
-                    temp_obj["pageid"] = image["pageid"]
+                    temp_obj["pageid"] = str(image["pageid"]) + q_number
+                    
                 if "title" in image:
                     temp_obj["title"] = image["title"]
                 if "imageinfo" in image and len(image["imageinfo"]) > 0 and "extmetadata" in image["imageinfo"][0]:
@@ -228,8 +230,8 @@ def search_commons_cat(cat):
 
                 out.append(temp_obj)
         
-        if "continue" in data and "gcmcontinue" in data["continue"]:
-            payload["continue"] = data["continue"]["gcmcontinue"]
+        if "continue" in data and data["continue"].get("continue") == "gcmcontinue":
+            payload["continue"] = data["continue"]
         else:
             next_page = False
     return out 

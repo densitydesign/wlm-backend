@@ -17,7 +17,7 @@ class Command(BaseCommand):
 
         if m.data.get("commons_n"):
             for cat in m.data.get("commons_n"):
-                commons_image_data = search_commons_cat(cat)
+                commons_image_data = search_commons_cat(m.q_number, cat)
                 for image in commons_image_data:
                     title = image.get("title", "")
                     if title:
@@ -36,7 +36,7 @@ class Command(BaseCommand):
 
         if m.wlm_n:
             wlm_pics_collected = 0
-            wlm_images_data = search_commons_wlm(m.wlm_n)
+            wlm_images_data = search_commons_wlm(m.q_number, m.wlm_n)
             for image in wlm_images_data:
                 update_image(m, image, "wlm")
                 wlm_pics_collected += 1

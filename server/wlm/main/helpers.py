@@ -345,6 +345,8 @@ def monument_prop(monument_data, prop, default=None):
 
 
 def update_image(monument, image_data, image_type, is_relevant=False):
+
+    
     image_id = image_data.get("pageid", None)
     image_title = image_data.get("title", "")
 
@@ -380,7 +382,7 @@ def update_image(monument, image_data, image_type, is_relevant=False):
             data=image_data,
             is_relevant=is_relevant,
         )
-
+    
     return picture
 
 
@@ -404,7 +406,7 @@ def get_administrative_areas(position, admin_entity=None):
                 logger.info(f"geo areas updated from admin_entity ({admin_entity})")
                 return {"municipality":municipality, "province":province, "region":region}
 
-            except MunicipalityLookup.DoesNotExist:
+            except Municipality.DoesNotExist:
                 pass
 
     try:
@@ -511,18 +513,9 @@ def update_monument(
     commons_pics_collected = 0
     if not skip_pictures:
         logger.info(f"Updating pictures for {code}")
-        # # relevant image
-        
-        # for relevant_image_url in relevant_images:
-        #     relevant_images_data = search_commons_url(relevant_image_url)
-        #     #logger.info(f"found {len(relevant_images_data)} relevant images for {code}")
-        #     for image in relevant_images_data:
-        #         update_image(monument, image, "commons")
-        #         commons_pics_collected += 1
-
         if monument_data.get("commons_n"):
             for cat in monument_data.get("commons_n"):
-                commons_image_data = search_commons_cat(cat)
+                commons_image_data = search_commons_cat(monument.q_number, cat)
                 for image in commons_image_data:
                     title = image.get("title", "")
                     if title:
@@ -537,9 +530,10 @@ def update_monument(
                             is_relevant = True
                             break
                     update_image(monument, image, "commons", is_relevant)
+                    commons_pics_collected += 1
 
         if wlm_n:
-            images = search_commons_wlm(wlm_n)
+            images = search_commons_wlm(monument.q_number, wlm_n)
             #logger.info(f"found {len(images)} wlm images for {code}")
             for image in images:
                 update_image(monument, image, "wlm")
@@ -607,8 +601,8 @@ def update_category(
             )
         except Exception as e:
             logger.exception(e)
-    #print(monuments)
     Parallel(n_jobs=3, prefer="threads")(delayed(process_monument)(mon) for mon in monuments)
+    
 
 
 
@@ -733,7 +727,7 @@ def update_geo_areas(all=False):
     """tries to update missing municipalities, provinces and regions on all the dataset"""
     qs = Monument.objects.all()
     if not all:
-        qs = qs.filter(municipality=None, position__isnull=False)
+        qs = qs.filter(municipality=None)
 
     logger.info("Updating geo areas for " + str(qs.count()) + " monuments")
     for monument in qs:
