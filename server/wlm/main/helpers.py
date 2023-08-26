@@ -409,6 +409,9 @@ def get_administrative_areas(position, admin_entity=None):
             except Municipality.DoesNotExist:
                 pass
 
+    if not position:
+        return None
+
     try:
         municipality_look = MunicipalityLookup.objects.get(
             poly__contains=position,
@@ -587,7 +590,7 @@ def update_monument(
                 monument.in_contest = monument.end < monument.start
     
     monument.save()
-    
+
     return monument
 
 

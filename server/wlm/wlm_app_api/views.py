@@ -184,6 +184,7 @@ def qs_to_featurecollection(qs):
                 "geometry": geom,
                 "properties": {
                     "ids": row["ids"],
+                    
                     # "name": row["name"]
                 },
             }
