@@ -144,12 +144,16 @@ def search_commons_wlm(q_number, wlm_id):
     
     next_page = True
     out = []
+    read = 0
     while(next_page):
         r = requests.get(COMMONS_URL, params)
         data = r.json()
         if "query" in data and "pages" in data["query"] and len(data["query"]["pages"]) > 0:
             for pageid in data["query"]["pages"]:
                 image = data["query"]["pages"][str(pageid)]
+                read += 1
+                print(read, image["title"])
+
                 temp_obj = {}
                 
                 if "pageid" in image:
@@ -172,8 +176,8 @@ def search_commons_wlm(q_number, wlm_id):
 
                 out.append(temp_obj)
         
-        if "continue" in data and "gsroffset" in data["continue"]:
-            params["gsroffset"] = data["continue"]["gsroffset"]
+        if "continue" in data:
+            params.update(data["continue"])
         else:
             next_page = False
     
@@ -182,6 +186,8 @@ def search_commons_wlm(q_number, wlm_id):
 
 
 def search_commons_cat(q_number, cat):    
+
+    print(q_number, cat)
 
     #filename = url.split("FilePath/")[-1]
     payload = {
@@ -192,28 +198,34 @@ def search_commons_cat(q_number, cat):
         "iiprop": "extmetadata",
         "gcmtype": "file",
         "gcmtitle": "Category:" + cat,
-        "gsrnamespace" : "6|12|14|100|106",
+        "gcmnamespace" : "0|6|12|14|100|106",
         
     }
 
     next_page = True
     out = []
-
+    read = 0
     while next_page:
         params = "&".join("%s=%s" % (k,v) for k,v in payload.items())
         r = requests.get(COMMONS_URL, params)
+        print  (r.url)
         data = r.json()
         
         if "query" in data and "pages" in data["query"] and len(data["query"]["pages"]) > 0:
 
             for pageid in data["query"]["pages"]:
                 image = data["query"]["pages"][str(pageid)]
+                read += 1
+                print(read, image["title"])
+
                 temp_obj = {}
                 if "pageid" in image:
                     temp_obj["pageid"] = str(image["pageid"]) + q_number
                     
                 if "title" in image:
                     temp_obj["title"] = image["title"]
+            
+
                 if "imageinfo" in image and len(image["imageinfo"]) > 0 and "extmetadata" in image["imageinfo"][0]:
                     extmetadata = image["imageinfo"][0]["extmetadata"]
                     if "DateTimeOriginal" in extmetadata and "value" in extmetadata["DateTimeOriginal"]:
@@ -230,8 +242,9 @@ def search_commons_cat(q_number, cat):
 
                 out.append(temp_obj)
         
-        if "continue" in data and data["continue"].get("continue") == "gcmcontinue":
-            payload["continue"] = data["continue"]
+        #print("continue", data)
+        if "continue" in data:
+            payload.update(data["continue"])
         else:
             next_page = False
     return out 

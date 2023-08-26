@@ -14,7 +14,7 @@ class Command(BaseCommand):
 
         m = Monument.objects.get(pk=options['id'])
         #print(m.relevant_images)
-
+        commons_pics_collected = 0
         if m.data.get("commons_n"):
             for cat in m.data.get("commons_n"):
                 commons_image_data = search_commons_cat(m.q_number, cat)
@@ -32,7 +32,9 @@ class Command(BaseCommand):
                             is_relevant = True
                             break
                     update_image(m, image, "commons", is_relevant)
-
+                    commons_pics_collected += 1
+        
+        m.pictures_commons_count = commons_pics_collected
 
         if m.wlm_n:
             wlm_pics_collected = 0
@@ -42,6 +44,9 @@ class Command(BaseCommand):
                 wlm_pics_collected += 1
         
             m.pictures_wlm_count = wlm_pics_collected
-            m.save()
+        
+        
+        m.pictures_count = m.pictures.all().count()
+        m.save()
 
         
