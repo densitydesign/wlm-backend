@@ -493,7 +493,7 @@ def update_monument(
         "admin_entity": admin_entity,
     }
 
-    if not skip_geo and position is not None:
+    if not skip_geo:
         administrative_areas = get_administrative_areas(position, admin_entity)
         if administrative_areas is not None:
             defaults.update(administrative_areas)
