@@ -186,8 +186,8 @@ def get_eps_for_resolution(res):
     return 0
 
 
-def qs_to_featurecollection(qs):
-    out = {"type": "FeatureCollection", "features": []}
+def qs_to_featurecollection(qs, name=""):
+    out = {"type": "FeatureCollection", "features": [], "name": name}
     for row in qs:
         if row["position"]:
             geom = json.loads(row["position"])
@@ -315,9 +315,9 @@ class ClusterMonumentsApi(APIView):
             if last_snapshot:
                 cache_key = f"cluster_region_{last_snapshot.pk}_" + str(request.query_params)
                 # look for cache
-                cached = cache.get(cache_key)
-                if cached:
-                    return Response(cached)
+                # cached = cache.get(cache_key)
+                # if cached:
+                #     return Response(cached)
 
             qs = qs.select_related("region").values("region__name", "region__pk")
 
@@ -326,12 +326,13 @@ class ClusterMonumentsApi(APIView):
                 position=models.functions.AsGeoJSON(models.functions.Transform("region__centroid", 3857)),
             ).values("ids", "position", "region__name")
 
-            out = Response(qs_to_featurecollection(qs))
+            out = Response(qs_to_featurecollection(qs, "region"))
+            return out
 
             # caching
-            if cache_key:
-                cache.set(cache_key, out.data, 60 * 60 * 24 * 30)
-            return out
+            # if cache_key:
+            #     cache.set(cache_key, out.data, 60 * 60 * 24 * 30)
+            # return out
 
         if float(resolution) > 300:
             # grouping by province
@@ -341,9 +342,9 @@ class ClusterMonumentsApi(APIView):
             if last_snapshot:
                 cache_key = f"cluster_province_{last_snapshot.pk}_" + str(request.query_params)
                 # look for cache
-                cached = cache.get(cache_key)
-                if cached:
-                    return Response(cached)
+                # cached = cache.get(cache_key)
+                # if cached:
+                #     return Response(cached)
 
             qs = qs.select_related("province").values("province__name", "province__pk")
 
@@ -352,10 +353,10 @@ class ClusterMonumentsApi(APIView):
                 position=models.functions.AsGeoJSON(models.functions.Transform("province__centroid", 3857)),
             ).values("ids", "position", "province__name")
 
-            out = Response(qs_to_featurecollection(qs))
+            out = Response(qs_to_featurecollection(qs, "province"))
             # caching
-            if cache_key:
-                cache.set(cache_key, out.data, 60 * 60 * 24 * 30)
+            # if cache_key:
+            #     cache.set(cache_key, out.data, 60 * 60 * 24 * 30)
             return out
 
         print("no clusters")
@@ -369,6 +370,7 @@ class ClusterMonumentsApi(APIView):
         #         return Response(cached)
 
         bbox = Polygon.from_bbox(bbox)
+        
         qs = qs.filter(
             position__within=bbox,
         )
