@@ -225,6 +225,8 @@ def qs_to_featurecollection_flat(qs):
             for k in remove_keys:
                 del data[k]
             data.update(data_add)
+            if "position" in data:
+                data["position"] = json.loads(data["position"])
 
         else:
             print(row)
@@ -369,6 +371,7 @@ class ClusterMonumentsApi(APIView):
             ids=models.Value(1, output_field=models.IntegerField()),
             pos=models.functions.AsGeoJSON(models.functions.Transform("position", 3857)),
             categories_=ArrayAgg("categories__pk"),
+            position_=models.functions.AsGeoJSON('position'),
         ).values(
             "ids",
             "pos",
@@ -378,6 +381,8 @@ class ClusterMonumentsApi(APIView):
             "in_contest",
             "pictures_count",
             "pictures_wlm_count",
+            "position_",
+            
         )
 
         out = Response(qs_to_featurecollection_flat(qs))

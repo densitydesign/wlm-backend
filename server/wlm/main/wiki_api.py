@@ -121,6 +121,8 @@ def search_commons_url(url):
                         temp_obj["ImageDescription"] = extmetadata["ImageDescription"]["value"]
 
                 out.append(temp_obj)
+        else:
+            next_page = False
         
         if "continue" in data and "gsroffset" in data["continue"]:
             params["gsroffset"] = data["continue"]["gsroffset"]
@@ -175,6 +177,8 @@ def search_commons_wlm(q_number, wlm_id):
                         temp_obj["ImageDescription"] = extmetadata["ImageDescription"]["value"]
 
                 out.append(temp_obj)
+        else:
+            next_page = False
         
         if "continue" in data:
             params.update(data["continue"])
@@ -240,6 +244,8 @@ def search_commons_cat(q_number, cat):
                         temp_obj["ImageDescription"] = extmetadata["ImageDescription"]["value"]
 
                 out.append(temp_obj)
+        else:
+            next_page = False
         
         #print("continue", data)
         if "continue" in data:
