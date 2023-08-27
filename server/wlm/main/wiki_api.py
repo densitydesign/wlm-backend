@@ -212,10 +212,11 @@ def search_commons_cat(q_number, cat):
     while next_page:
         params = "&".join("%s=%s" % (k,v) for k,v in payload.items())
         r = requests.get(COMMONS_URL, params)
+        print(r.url)
         data = r.json()
         
         if "query" in data and "pages" in data["query"] and len(data["query"]["pages"]) > 0:
-
+            
             for pageid in data["query"]["pages"]:
                 image = data["query"]["pages"][str(pageid)]
                 read += 1
@@ -248,7 +249,7 @@ def search_commons_cat(q_number, cat):
             next_page = False
         
         #print("continue", data)
-        if "continue" in data:
+        if "continue" in data and "batchcomplete" in data:
             payload.update(data["continue"])
         else:
             next_page = False

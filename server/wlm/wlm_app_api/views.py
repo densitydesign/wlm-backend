@@ -27,11 +27,9 @@ from .serializers import (
     MonumentAppListNoContestSerializer,
     UploadImagesSerializer,
     ContestSerializer,
-    MonumentGeoSerializer,
 )
 from django.utils import timezone
 from uuid import uuid4
-from urllib.parse import urlparse, parse_qs
 from .helpers import get_upload_categories
 
 
@@ -556,14 +554,12 @@ class PersonalContributionsView(APIView):
         )
         response.raise_for_status()
         data = response.json()
-        print(data)
         images = list(data["query"]["pages"].values())
         return Response(images)
 
 
 class CurrentContestsView(APIView):
     def get(self, request, *args, **kwargs):
-        now = timezone.now()
         active_contests = Contest.get_active()
         ser = ContestSerializer(active_contests, many=True)
         return Response(ser.data)
