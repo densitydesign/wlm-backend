@@ -194,6 +194,9 @@ class AppCategory(models.Model):
     def __str__(self):
         return self.name
     
+    class Meta:
+        ordering = ['priority']
+    
 
 
 class Contest(models.Model):

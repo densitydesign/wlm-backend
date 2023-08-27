@@ -473,8 +473,10 @@ def update_monument(
     location = monument_prop(monument_data, "locationLabel", "")
     address = monument_prop(monument_data, "address", "")
     admin_entity = monument_prop(monument_data, "adminEntity", "")
-    
 
+    if start:
+        start = "s"+start
+    
     defaults = {
         "label":label,
         "wlm_n":wlm_n,
@@ -498,10 +500,16 @@ def update_monument(
         if administrative_areas is not None:
             defaults.update(administrative_areas)
 
-    monument, created = Monument.objects.update_or_create(
-        q_number=code,
-        defaults=defaults
-    )
+    try:
+        monument, created = Monument.objects.update_or_create(
+            q_number=code,
+            defaults=defaults
+        )
+    except Exception as e:
+        logger.exception(e)
+        logger.info("Could not save monument due to data problems")
+        logger.info(defaults)
+        return None
     
     #categories are cleared by the method update_category
     monument.categories.add(category)
@@ -611,6 +619,7 @@ def update_category(
             )
         except Exception as e:
             logger.exception(e)
+            
     Parallel(n_jobs=3, prefer="threads")(delayed(process_monument)(mon) for mon in monuments)
     
 
@@ -667,9 +676,7 @@ def process_category_snapshot(
             )
             raise e
     
-    #logger.info("exiting in debug, please remove")
-    #return 
-
+    
     monuments = [format_monument(x) for x in cat_snapshot.payload]
     monuments_q_numbers = [x.get('mon', None) for x in monuments]
     monuments_q_numbers = [x for x in monuments_q_numbers if x is not None]

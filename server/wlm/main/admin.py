@@ -16,7 +16,13 @@ from main.models import (
 admin.site.register(Region)
 admin.site.register(Province)
 admin.site.register(Municipality)
-admin.site.register(Category)
+
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ["label", "q_number", "group", "app_category"]
+    list_filter = ["app_category"]
+    search_fields = ["label", "q_number"]
+
+admin.site.register(Category, CategoryAdmin)
 
 
 class PictureAdmin(admin.ModelAdmin):

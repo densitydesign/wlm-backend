@@ -4,10 +4,11 @@ import requests
 from django.core.cache import cache
 from django.conf import settings
 from django.contrib.gis.db.models.functions import Distance
-from django.contrib.gis.geos import Point
+from django.contrib.gis.geos import Point, Polygon
 from django.contrib.gis.db import models
+from django.contrib.postgres.aggregates import ArrayAgg
 from django_filters import rest_framework as filters
-from main.models import AppCategory, Monument, Picture, Snapshot, Contest
+from main.models import AppCategory, Monument, Picture, Snapshot, Contest, Category
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
@@ -26,6 +27,7 @@ from .serializers import (
     MonumentAppListNoContestSerializer,
     UploadImagesSerializer,
     ContestSerializer,
+    MonumentGeoSerializer,
 )
 from django.utils import timezone
 from uuid import uuid4
@@ -45,12 +47,28 @@ class MonumentFilter(filters.FilterSet):
     category = filters.CharFilter(method="filter_category")
 
     def filter_category(self, queryset, name, value):
+        """
+        Match only the first
+        """
         if value:
             app_category = AppCategory.objects.get(name=value)
             if not app_category:
                 return queryset.none()
-            categories_pks = app_category.categories.values_list("pk", flat=True)
-            return queryset.filter(categories__pk__in=categories_pks).distinct()
+
+            first_app_category = (
+                Monument.categories.through.objects.filter(
+                    monument_id=models.OuterRef("pk"),
+                )
+                .order_by("category__app_category__priority")
+                .values("category_id")[:1]
+            )
+
+            categories = Category.objects.filter(app_category=app_category).values_list("pk", flat=True)
+
+            return queryset.annotate(first_app_category=models.Subquery(first_app_category)).filter(
+                first_app_category__in=categories
+            )
+
         return queryset
 
     def filter_only_without_pictures(self, queryset, name, value):
@@ -184,11 +202,36 @@ def qs_to_featurecollection(qs):
                 "geometry": geom,
                 "properties": {
                     "ids": row["ids"],
-                    
                     # "name": row["name"]
                 },
             }
         )
+    return out
+
+
+def qs_to_featurecollection_flat(qs):
+    out = {"type": "FeatureCollection", "features": []}
+    for row in qs:
+        if row["pos"]:
+            geom = json.loads(row["pos"])
+            data = {x: row[x] for x in row if x != "pos"}
+            data_add = {}
+            remove_keys = []
+            for d in data:
+                if d.endswith("_"):
+                    data_add[d[:-1]] = data[d]
+                    remove_keys.append(d)
+
+            for k in remove_keys:
+                del data[k]
+            data.update(data_add)
+
+        else:
+            print(row)
+            continue
+            geom = None
+
+        out["features"].append({"type": "Feature", "geometry": geom, "properties": data})
     return out
 
 
@@ -222,8 +265,6 @@ class ClusterMonumentsApi(APIView):
         if len(bbox) != 4:
             raise APIException("bbox must be a comma separated list of 4 numbers")
 
-        bbox_condition = f"WHERE position && ST_MakeEnvelope({bbox[0]}, {bbox[1]}, {bbox[2]}, {bbox[3]}, 4326)"
-
         resolution = request.query_params.get("resolution", None)
         # print(resolution)
         if not resolution:
@@ -233,13 +274,40 @@ class ClusterMonumentsApi(APIView):
         only_without_pictures = request.query_params.get("only_without_pictures", None)
         in_contest = request.query_params.get("in_contest", None)
         category = request.query_params.get("category", None)
-
-
         active_contests = Contest.get_active()
 
+        qs = Monument.objects.filter(position__isnull=False)
 
+        if municipality:
+            qs = qs.filter(municipality_id=municipality)
+        if only_without_pictures:
+            qs = qs.filter(pictures_count=0)
+        if in_contest:
+            if active_contests:
+                qs = qs.filter(in_contest=True)
+            else:
+                qs = qs.none()
+
+        if category:
+            app_category = AppCategory.objects.get(name__iexact=category)
+            if not app_category:
+                raise APIException("Invalid category")
+
+            first_app_category = (
+                Monument.categories.through.objects.filter(
+                    monument_id=models.OuterRef("pk"),
+                )
+                .order_by("category__app_category__priority")
+                .values("category_id")[:1]
+            )
+
+            categories = Category.objects.filter(app_category=app_category).values_list("pk", flat=True)
+            qs = qs.annotate(first_app_category=models.Subquery(first_app_category)).filter(
+                first_app_category__in=categories
+            )
 
         if float(resolution) > 1000:
+            print("print region")
             # grouping by region
             # looking for cache first
             cache_key = None
@@ -251,33 +319,15 @@ class ClusterMonumentsApi(APIView):
                 if cached:
                     return Response(cached)
 
-            qs = (
-                Monument.objects.filter(position__isnull=False)
-                .select_related("region")
-                .values("region__name", "region__pk")
-            )
-
-            if municipality:
-                qs = qs.filter(municipality_id=municipality)
-            if only_without_pictures:
-                qs = qs.filter(pictures_count=0)
-            if in_contest:
-                if active_contests:
-                    qs = qs.filter(in_contest=True)
-                else:
-                    qs = qs.none()
-            if category:
-                app_category = AppCategory.objects.get(name__iexact=category)
-                if not app_category:
-                    raise APIException("Invalid category")
-                categories_pks = app_category.categories.values_list("pk", flat=True)
-                qs = qs.filter(categories__pk__in=categories_pks)
+            qs = qs.select_related("region").values("region__name", "region__pk")
 
             qs = qs.annotate(
                 ids=models.Count("id"),
                 position=models.functions.AsGeoJSON(models.functions.Transform("region__centroid", 3857)),
             ).values("ids", "position", "region__name")
+
             out = Response(qs_to_featurecollection(qs))
+
             # caching
             if cache_key:
                 cache.set(cache_key, out.data, 60 * 60 * 24 * 30)
@@ -285,6 +335,7 @@ class ClusterMonumentsApi(APIView):
 
         if float(resolution) > 300:
             # grouping by province
+            print("print province")
             cache_key = None
             last_snapshot = Snapshot.objects.filter(complete=True).order_by("-created").first()
             if last_snapshot:
@@ -294,104 +345,51 @@ class ClusterMonumentsApi(APIView):
                 if cached:
                     return Response(cached)
 
-            qs = (
-                Monument.objects.filter(position__isnull=False)
-                .select_related("province")
-                .values("province__name", "province__pk")
-            )
-
-            if municipality:
-                qs = qs.filter(municipality_id=municipality)
-            if only_without_pictures:
-                qs = qs.filter(pictures_count=0)
-            if in_contest:
-                if active_contests:
-                    qs = qs.filter(in_contest=True)
-                else:
-                    qs = qs.none()
-            if category:
-                app_category = AppCategory.objects.get(name__iexact=category)
-                if not app_category:
-                    raise APIException("Invalid category")
-                categories_pks = app_category.categories.values_list("pk", flat=True)
-                qs = qs.filter(categories__pk__in=categories_pks)
+            qs = qs.select_related("province").values("province__name", "province__pk")
 
             qs = qs.annotate(
                 ids=models.Count("id"),
                 position=models.functions.AsGeoJSON(models.functions.Transform("province__centroid", 3857)),
             ).values("ids", "position", "province__name")
+
             out = Response(qs_to_featurecollection(qs))
             # caching
             if cache_key:
                 cache.set(cache_key, out.data, 60 * 60 * 24 * 30)
             return out
 
-        # "fake" clustering
-        eps = get_eps_for_resolution(float(resolution))
+        print("no clusters")
+        # cache_key = None
+        # last_snapshot = Snapshot.objects.filter(complete=True).order_by("-created").first()
+        # if last_snapshot:
+        #     cache_key = f"cluster_bbox_{last_snapshot.pk}_" + str(request.query_params)
+        #     # look for cache
+        #     cached = cache.get(cache_key)
+        #     if cached:
+        #         return Response(cached)
 
-        filter_condition = ""
-        if municipality:
-            filter_condition += f" AND main_monument.municipality_id = {municipality}"
-        if only_without_pictures:
-            filter_condition += f" AND (pictures_count = 0 OR pictures_count IS NULL)"
-        if in_contest:
-            if active_contests:
-                filter_condition += f" AND in_contest = True"
-            else:
-                filter_condition += f" AND False"
-            
-        if category:
-            app_category = AppCategory.objects.get(name__iexact=category)
-            if not app_category:
-                raise APIException("Invalid category")
-            categories_pks = app_category.categories.values_list("pk", flat=True)
-            filter_condition += (
-                f" AND main_monument_categories.category_id IN ({','.join([str(pk) for pk in categories_pks])})"
-            )
-
-        cursor = connection.cursor()
-        cursor.execute(
-            f"""
-            SELECT 
-                cid,
-                properties,
-                ST_AsGeoJSON(
-                    ST_Transform(
-                        ST_Centroid(ST_Collect(position)),
-                        'EPSG:4326',
-                        'EPSG:3857'
-                    )
-                ) AS position, 
-                count(id) AS ids 
-
-            FROM (
-                SELECT 
-                    id, position,
-                    CASE WHEN cidx IS NOT NULL THEN cidx ELSE id END AS cid, 
-                    CASE WHEN cidx IS NOT NULL THEN null ELSE properties END AS properties
-
-                
-            FROM (
-                SELECT main_monument.id as id, ST_ClusterDBSCAN(position, eps := {eps}, minpoints := 4) over () AS cidx, position,
-                jsonb_build_object(
-                    'id', main_monument.id,
-                    'categories',  array_agg(main_monument_categories.category_id),
-                    'label', label, 
-                    'in_contest', in_contest, 
-                    'position', position,
-                    'pictures_count', pictures_count,
-                    'pictures_wlm_count', pictures_wlm_count) as properties 
-                FROM main_monument JOIN main_monument_categories ON main_monument.id = main_monument_categories.monument_id
-                {bbox_condition}
-                {filter_condition}
-                GROUP BY main_monument.id
-            ) sq) sq2
-            GROUP BY cid, properties
-            """
+        bbox = Polygon.from_bbox(bbox)
+        qs = qs.filter(
+            position__within=bbox,
         )
-        rows = dictfetchall(cursor)
-        out = clusters_to_feature_collection(rows)
-        return Response(out)
+
+        qs = qs.annotate(
+            ids=models.Value(1, output_field=models.IntegerField()),
+            pos=models.functions.AsGeoJSON(models.functions.Transform("position", 3857)),
+            categories_=ArrayAgg("categories__pk"),
+        ).values(
+            "ids",
+            "pos",
+            "label",
+            "categories_",
+            "id",
+            "in_contest",
+            "pictures_count",
+            "pictures_wlm_count",
+        )
+
+        out = Response(qs_to_featurecollection_flat(qs))
+        return out
 
 
 class UploadImageView(APIView):
@@ -424,7 +422,6 @@ class UploadImageView(APIView):
             raise APIException("Errore di autenticazione: riprova ad effettuare il login")
 
         for uploaded_image in ser.validated_data["images"]:
-
             title = uploaded_image["title"]
             image = uploaded_image["image"]
             description = uploaded_image["description"]
@@ -436,7 +433,7 @@ class UploadImageView(APIView):
             title = f"File:{title}{ext}"
             # TODO CHECK EXISTENCE
             # GRAB CSRF TOKEN
-            
+
             # COMPUTE CATEGORIES
             wlm_categories = []
             non_wlm_categories = []
@@ -506,7 +503,7 @@ class UploadImageView(APIView):
                 headers={"Authorization": f"Bearer {oauth_token.access_token}"},
                 token=oauth_token.to_token(),
             )
-            
+
             if upload_res.ok:
                 upload_res_data = upload_res.json()
                 if "error" in upload_res_data:

@@ -208,7 +208,6 @@ def search_commons_cat(q_number, cat):
     while next_page:
         params = "&".join("%s=%s" % (k,v) for k,v in payload.items())
         r = requests.get(COMMONS_URL, params)
-        print  (r.url)
         data = r.json()
         
         if "query" in data and "pages" in data["query"] and len(data["query"]["pages"]) > 0:
