@@ -474,9 +474,6 @@ def update_monument(
     address = monument_prop(monument_data, "address", "")
     admin_entity = monument_prop(monument_data, "adminEntity", "")
 
-    if start:
-        start = "s"+start
-    
     defaults = {
         "label":label,
         "wlm_n":wlm_n,
