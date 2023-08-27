@@ -202,7 +202,7 @@ def qs_to_featurecollection(qs, name=""):
                 "geometry": geom,
                 "properties": {
                     "ids": row["ids"],
-                    # "name": row["name"]
+                    "cluster": row["cluster"],
                 },
             }
         )
@@ -323,8 +323,9 @@ class ClusterMonumentsApi(APIView):
 
             qs = qs.annotate(
                 ids=models.Count("id"),
+                cluster=models.F("region__name"),
                 position=models.functions.AsGeoJSON(models.functions.Transform("region__centroid", 3857)),
-            ).values("ids", "position", "region__name")
+            ).values("ids", "position", "cluster")
 
             out = Response(qs_to_featurecollection(qs, "region"))
             return out
@@ -350,8 +351,9 @@ class ClusterMonumentsApi(APIView):
 
             qs = qs.annotate(
                 ids=models.Count("id"),
+                cluster=models.F("province__name"),
                 position=models.functions.AsGeoJSON(models.functions.Transform("province__centroid", 3857)),
-            ).values("ids", "position", "province__name")
+            ).values("ids", "position", "cluster")
 
             out = Response(qs_to_featurecollection(qs, "province"))
             # caching
