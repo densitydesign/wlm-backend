@@ -307,17 +307,16 @@ class ClusterMonumentsApi(APIView):
             )
 
         if float(resolution) > 1000:
-            print("print region")
             # grouping by region
             # looking for cache first
             cache_key = None
             last_snapshot = Snapshot.objects.filter(complete=True).order_by("-created").first()
             if last_snapshot:
                 cache_key = f"cluster_region_{last_snapshot.pk}_" + str(request.query_params)
-                # look for cache
-                # cached = cache.get(cache_key)
-                # if cached:
-                #     return Response(cached)
+                #look for cache
+                cached = cache.get(cache_key)
+                if cached:
+                    return Response(cached)
 
             qs = qs.select_related("region").values("region__name", "region__pk")
 
@@ -328,24 +327,23 @@ class ClusterMonumentsApi(APIView):
             ).values("ids", "position", "cluster")
 
             out = Response(qs_to_featurecollection(qs, "region"))
-            return out
+            
 
-            # caching
-            # if cache_key:
-            #     cache.set(cache_key, out.data, 60 * 60 * 24 * 30)
-            # return out
+            #caching
+            if cache_key:
+                cache.set(cache_key, out.data, 60 * 60 * 24 * 30)
+            return out
 
         if float(resolution) > 300:
             # grouping by province
-            print("print province")
             cache_key = None
             last_snapshot = Snapshot.objects.filter(complete=True).order_by("-created").first()
             if last_snapshot:
                 cache_key = f"cluster_province_{last_snapshot.pk}_" + str(request.query_params)
                 # look for cache
-                # cached = cache.get(cache_key)
-                # if cached:
-                #     return Response(cached)
+                cached = cache.get(cache_key)
+                if cached:
+                    return Response(cached)
 
             qs = qs.select_related("province").values("province__name", "province__pk")
 
@@ -356,20 +354,10 @@ class ClusterMonumentsApi(APIView):
             ).values("ids", "position", "cluster")
 
             out = Response(qs_to_featurecollection(qs, "province"))
-            # caching
-            # if cache_key:
-            #     cache.set(cache_key, out.data, 60 * 60 * 24 * 30)
+            #caching
+            if cache_key:
+                cache.set(cache_key, out.data, 60 * 60 * 24 * 30)
             return out
-
-        print("no clusters")
-        # cache_key = None
-        # last_snapshot = Snapshot.objects.filter(complete=True).order_by("-created").first()
-        # if last_snapshot:
-        #     cache_key = f"cluster_bbox_{last_snapshot.pk}_" + str(request.query_params)
-        #     # look for cache
-        #     cached = cache.get(cache_key)
-        #     if cached:
-        #         return Response(cached)
 
         bbox = Polygon.from_bbox(bbox)
         
