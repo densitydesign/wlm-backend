@@ -311,15 +311,15 @@ def get_upload_categories(q_number):
 
     if "monumental tree" in monument_categories:
         wlm_categories.append(base_category + " - veteran trees")
-        non_wlm_categories.append("veteran trees")
+        #non_wlm_categories.append("veteran trees")
 
     elif "municipality overview picture" in monument_categories:
         wlm_categories.append(base_category + " - cityscapes")
-        non_wlm_categories.append("cityscapes")
+        #non_wlm_categories.append("cityscapes")
 
     elif monument_data and monument_data["is_religious"]:
         wlm_categories.append(base_category + " - religious buildings")
-        non_wlm_categories.append("religious buildings")
+        #non_wlm_categories.append("religious buildings")
 
     else:
         wlm_categories.append(base_category + " - traditional contest")
