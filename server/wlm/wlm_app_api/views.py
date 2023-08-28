@@ -405,6 +405,9 @@ class UploadImageView(APIView):
         all_results = []
         did_fail = False
 
+        active_contests = Contest.get_active()
+
+
         try:
             csrf_res = oauth.mediawiki.get(
                 settings.URL_ACTION_API,
@@ -475,7 +478,7 @@ class UploadImageView(APIView):
             text += "== {{int:license-header}} ==\n"
             text += "{{self|cc-by-sa-4.0}}\n"
 
-            if monument.in_contest:
+            if monument.in_contest and active_contests:
                 text += "{{Wiki Loves Monuments %s|it}}" % (year,)
                 if wlm_categories:
                     text += "\n"
