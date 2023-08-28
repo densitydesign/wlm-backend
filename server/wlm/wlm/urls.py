@@ -20,6 +20,7 @@ from django.conf import settings
 
 urlpatterns = [
     path('admin/clearcache/', include('clearcache.urls')),
+    path('admin/django-rq/', include('django_rq.urls')),
     path('admin/', admin.site.urls),
     path('api/', include('main.urls')),
     path('api/', include('oauth.urls')),
@@ -28,7 +29,7 @@ urlpatterns = [
     # Optional UI:
     path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-    path('django-rq/', include('django_rq.urls')),
+    
     path('api/app/oauth/', include('oauth.urls')),
 
 ]
