@@ -26,6 +26,7 @@ from django.forms import ValidationError
 from django.utils.timezone import make_aware
 from django.contrib.gis.geos import Point
 from joblib import Parallel, delayed
+import sentry_sdk
 from main.wiki_api import (
     format_monument,
     WLM_QUERIES,
@@ -506,6 +507,7 @@ def update_monument(
         logger.exception(e)
         logger.info("Could not save monument due to data problems")
         logger.info(defaults)
+        sentry_sdk.capture_exception(e)
         return None
     
     #categories are cleared by the method update_category
@@ -838,6 +840,7 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
             except Exception as e: 
                 if cat_snapshot.category.label not in cats_errors:
                     cats_errors.append(cat_snapshot.category.label)
+                sentry_sdk.capture_exception(e)
                 continue
         
         monuments_data = [format_monument(x) for x in cat_snapshot.payload]

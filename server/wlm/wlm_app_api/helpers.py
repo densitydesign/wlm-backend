@@ -321,6 +321,9 @@ def get_upload_categories(q_number):
         wlm_categories.append(base_category + " - religious buildings")
         non_wlm_categories.append("religious buildings")
 
+    elif "generic religious building" in monument_categories:
+        non_wlm_categories.append("religious buildings")
+
     else:
         wlm_categories.append(base_category + " - traditional contest")
         non_wlm_categories.append("traditional contest")

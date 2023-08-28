@@ -5,6 +5,7 @@ import requests
 import time
 import csv
 import urllib.parse
+from retry import retry
 
 CURRENT_DIR = Path(__file__).resolve().parent
 SPARQL_URL = "https://query.wikidata.org/sparql"
@@ -130,7 +131,7 @@ def search_commons_url(url):
             next_page = False
     return out 
 
-
+@retry(tries=3, delay=10)
 def search_commons_wlm(q_number, wlm_id):
     params = {
         "action": "query",
@@ -150,6 +151,7 @@ def search_commons_wlm(q_number, wlm_id):
     while(next_page):
         r = requests.get(COMMONS_URL, params)
         data = r.json()
+
         if "query" in data and "pages" in data["query"] and len(data["query"]["pages"]) > 0:
             for pageid in data["query"]["pages"]:
                 image = data["query"]["pages"][str(pageid)]
@@ -188,7 +190,7 @@ def search_commons_wlm(q_number, wlm_id):
     return out
 
 
-
+@retry(tries=3, delay=10)
 def search_commons_cat(q_number, cat):    
 
     print(q_number, cat)
