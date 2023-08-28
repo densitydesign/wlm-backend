@@ -201,6 +201,7 @@ class AppCategory(models.Model):
 
 class Contest(models.Model):
     label = models.CharField(max_length=200)
+    label_en = models.CharField(max_length=200, blank=True, default="")
     start_date = models.DateField()
     end_date = models.DateField()
     description = models.TextField(blank=True, default="")
