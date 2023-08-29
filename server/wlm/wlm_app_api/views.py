@@ -22,9 +22,7 @@ from oauth.models import OAuth2Token
 from oauth.views import oauth
 from .serializers import (
     MonumentAppDetailSerialier,
-    MonumentAppDetailNoContestSerialier,
     MonumentAppListSerializer,
-    MonumentAppListNoContestSerializer,
     UploadImagesSerializer,
     ContestSerializer,
 )
@@ -41,7 +39,6 @@ class StandardResultsSetPagination(PageNumberPagination):
 
 class MonumentFilter(filters.FilterSet):
     only_without_pictures = filters.BooleanFilter(label="only_without_pictures", method="filter_only_without_pictures")
-    in_contest = filters.BooleanFilter(label="in_contest", method="filter_in_contest")
     category = filters.CharFilter(method="filter_category")
 
     def filter_category(self, queryset, name, value):
@@ -75,21 +72,9 @@ class MonumentFilter(filters.FilterSet):
         else:
             return queryset
 
-    def filter_in_contest(self, queryset, name, value):
-        active_contests = Contest.get_active()
-        if active_contests:
-            if value:
-                return queryset.filter(in_contest=True)
-            else:
-                return queryset.filter(in_contest=False)
-        else:
-            if value:
-                return queryset.none()
-            return queryset
-
     class Meta:
         model = Monument
-        fields = ["municipality", "pictures_count"]
+        fields = ["municipality", "pictures_count", "in_contest"]
 
 
 class MonumentAppViewSet(viewsets.ReadOnlyModelViewSet):
@@ -124,16 +109,10 @@ class MonumentAppViewSet(viewsets.ReadOnlyModelViewSet):
         return qs
 
     def get_serializer_class(self):
-        active_contests = Contest.get_active()
-        if active_contests:
-            if self.action == "retrieve":
-                return MonumentAppDetailSerialier
-            return MonumentAppListSerializer
-
-        else:
-            if self.action == "retrieve":
-                return MonumentAppDetailNoContestSerialier
-            return MonumentAppListNoContestSerializer
+        if self.action == "retrieve":
+            return MonumentAppDetailSerialier
+        return MonumentAppListSerializer
+            
 
     @action(detail=True, methods=["get"], url_path="upload-categories")
     def upload_categories(self, request, pk=None):
@@ -274,8 +253,7 @@ class ClusterMonumentsApi(APIView):
         only_without_pictures = request.query_params.get("only_without_pictures", None)
         in_contest = request.query_params.get("in_contest", None)
         category = request.query_params.get("category", None)
-        active_contests = Contest.get_active()
-
+        
         qs = Monument.objects.filter(position__isnull=False)
 
         if municipality:
@@ -283,10 +261,7 @@ class ClusterMonumentsApi(APIView):
         if only_without_pictures:
             qs = qs.filter(pictures_count=0)
         if in_contest:
-            if active_contests:
-                qs = qs.filter(in_contest=True)
-            else:
-                qs = qs.none()
+            qs = qs.filter(in_contest=True)
 
         if category:
             app_category = AppCategory.objects.get(name__iexact=category)
@@ -457,16 +432,29 @@ class UploadImageView(APIView):
             # GENERATE TEXT
             text = "== {{int:filedesc}} ==\n"
             text += "{{Information\n"
-            text += (
-                "|description={{it|1=%s}}{{Monumento italiano|%s|anno=%s}}{{Load via app WLM.it|year=%s|source=%s}}\n"
-                % (
-                    description,
-                    str(monument.wlm_n),
-                    str(date.year),
-                    year,
-                    platform,
+            
+            if active_contests:
+                text += (
+                    "|description={{it|1=%s}}{{Monumento italiano|%s|anno=%s}}{{Load via app WLM.it|year=%s|source=%s}}\n"
+                    % (
+                        description,
+                        str(monument.wlm_n),
+                        str(date.year),
+                        year,
+                        platform,
+                    )
                 )
-            )
+            else:
+                text += (
+                    "|description={{it|1=%s}}{{Load via app WLM.it|year=%s|source=%s}}\n"
+                    % (
+                        description,
+                        year,
+                        platform,
+                    )
+                )
+            
+            
             text += "|date=%s\n" % (date_text,)
             text += "|source={{own}}\n"
             text += "|author=[[User:%s|%s]]\n" % (
