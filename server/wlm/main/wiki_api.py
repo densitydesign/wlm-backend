@@ -150,6 +150,7 @@ def search_commons_wlm(q_number, wlm_id):
     read = 0
     while(next_page):
         r = requests.get(COMMONS_URL, params)
+        print(r.url)
         data = r.json()
 
         if "query" in data and "pages" in data["query"] and len(data["query"]["pages"]) > 0:
@@ -182,7 +183,7 @@ def search_commons_wlm(q_number, wlm_id):
         else:
             next_page = False
         
-        if "continue" in data:
+        if "continue" in data and  "grsoffset" in data["continue"]:
             params.update(data["continue"])
         else:
             next_page = False
