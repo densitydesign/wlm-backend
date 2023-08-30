@@ -59,7 +59,7 @@ class PictureInline(admin.TabularInline):
 
 
 class MonumentAdmin(admin.ModelAdmin):
-    search_fields = ["label"]
+    search_fields = ["label", "q_number"]
     list_filter = ["region", "province", "categories", "start"]
     # inlines = [PictureInline]
 

@@ -150,15 +150,13 @@ def search_commons_wlm(q_number, wlm_id):
     read = 0
     while(next_page):
         r = requests.get(COMMONS_URL, params)
-        print(r.url)
         data = r.json()
 
         if "query" in data and "pages" in data["query"] and len(data["query"]["pages"]) > 0:
             for pageid in data["query"]["pages"]:
                 image = data["query"]["pages"][str(pageid)]
                 read += 1
-                print(read, image["title"])
-
+            
                 temp_obj = {}
                 
                 if "pageid" in image:
@@ -194,9 +192,6 @@ def search_commons_wlm(q_number, wlm_id):
 @retry(tries=3, delay=10)
 def search_commons_cat(q_number, cat):    
 
-    print(q_number, cat)
-
-    #filename = url.split("FilePath/")[-1]
     payload = {
         "action": "query",
         "format": "json",
@@ -206,7 +201,6 @@ def search_commons_cat(q_number, cat):
         "gcmtype": "file",
         "gcmtitle": "Category:" + cat,
         "gcmnamespace" : "0|6|12|14|100|106",
-        
     }
 
     next_page = True
@@ -215,7 +209,6 @@ def search_commons_cat(q_number, cat):
     while next_page:
         params = "&".join("%s=%s" % (k,v) for k,v in payload.items())
         r = requests.get(COMMONS_URL, params)
-        print(r.url)
         data = r.json()
         
         if "query" in data and "pages" in data["query"] and len(data["query"]["pages"]) > 0:
@@ -223,8 +216,7 @@ def search_commons_cat(q_number, cat):
             for pageid in data["query"]["pages"]:
                 image = data["query"]["pages"][str(pageid)]
                 read += 1
-                print(read, image["title"])
-
+                
                 temp_obj = {}
                 if "pageid" in image:
                     temp_obj["pageid"] = str(image["pageid"]) + q_number
