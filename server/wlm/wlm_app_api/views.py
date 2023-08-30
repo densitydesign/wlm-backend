@@ -106,7 +106,7 @@ class MonumentAppViewSet(viewsets.ReadOnlyModelViewSet):
                 raise APIException("user_lat and user_lon are required when ordering by distance")
             qs = qs.order_by("distance")
 
-        return qs
+        return qs.distinct()
 
     def get_serializer_class(self):
         if self.action == "retrieve":
@@ -189,9 +189,13 @@ def qs_to_featurecollection(qs, name=""):
 def qs_to_featurecollection_flat(qs):
     out = {"type": "FeatureCollection", "features": []}
     for row in qs:
+        
         if row["pos"]:
+
+            
             geom = json.loads(row["pos"])
             data = {x: row[x] for x in row if x != "pos"}
+            
             data_add = {}
             remove_keys = []
             for d in data:
@@ -204,6 +208,9 @@ def qs_to_featurecollection_flat(qs):
             data.update(data_add)
             if "position" in data:
                 data["position"] = json.loads(data["position"])
+
+            app_category = AppCategory.objects.filter(categories__in=data["categories"]).order_by("priority").values_list("name", flat=True).first()
+            data.update({"app_category": app_category})
 
         else:
             print(row)
@@ -433,7 +440,7 @@ class UploadImageView(APIView):
             text = "== {{int:filedesc}} ==\n"
             text += "{{Information\n"
             
-            if active_contests:
+            if monument.in_contest and active_contests:
                 text += (
                     "|description={{it|1=%s}}{{Monumento italiano|%s|anno=%s}}{{Load via app WLM.it|year=%s|source=%s}}\n"
                     % (

@@ -34,6 +34,7 @@ class MonumentAppListSerializer(serializers.ModelSerializer):
             "address",
             "location",
             "position",
+            "q_number",
         ]
 
 
