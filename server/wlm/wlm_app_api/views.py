@@ -188,6 +188,13 @@ def qs_to_featurecollection(qs, name=""):
 
 def qs_to_featurecollection_flat(qs):
     out = {"type": "FeatureCollection", "features": []}
+
+    categories = Category.objects.all().select_related("app_category")
+    categories_by_id = {category.pk: category for category in categories}
+
+
+
+    
     for row in qs:
         
         if row["pos"]:
@@ -209,9 +216,23 @@ def qs_to_featurecollection_flat(qs):
             if "position" in data:
                 data["position"] = json.loads(data["position"])
 
-            app_category = AppCategory.objects.filter(categories__in=data["categories"]).order_by("priority").values_list("name", flat=True).first()
-            data.update({"app_category": app_category})
-
+            if data["categories"]:
+                if not data["categories_priorities"]:
+                    data["app_category"]  = None
+                else:
+                    priorities = [x for x in data["categories_priorities"]] 
+                    for i, x in enumerate(priorities):
+                        if x is None:
+                            priorities[i] = 999
+                    
+                    min_priority = min(priorities)
+                    if min_priority == 999:
+                        data["app_category"] = "Altri monumenti"
+                    else:
+                        min_priority_index = data["categories_priorities"].index(min_priority)
+                        category_id = data["categories"][min_priority_index]
+                        data["app_category"] = categories_by_id[category_id].app_category.name
+                
         else:
             print(row)
             continue
@@ -350,7 +371,8 @@ class ClusterMonumentsApi(APIView):
         qs = qs.annotate(
             ids=models.Value(1, output_field=models.IntegerField()),
             pos=models.functions.AsGeoJSON(models.functions.Transform("position", 3857)),
-            categories_=ArrayAgg("categories__pk"),
+            categories_=ArrayAgg("categories__pk", order_by='categories__pk'),
+            categories_priorities=ArrayAgg("categories__app_category__priority", order_by='categories__pk'),
             position_=models.functions.AsGeoJSON('position'),
         ).values(
             "ids",
@@ -362,6 +384,7 @@ class ClusterMonumentsApi(APIView):
             "pictures_count",
             "pictures_wlm_count",
             "position_",
+            "categories_priorities",
             
         )
 
