@@ -1,3 +1,5 @@
+import requests
+from pathlib import Path
 from main.models import Monument, Picture, Contest, AppCategory
 from rest_framework import serializers
 from rest_framework_gis.serializers import GeometryField, GeoFeatureModelSerializer
@@ -129,6 +131,20 @@ class UploadImageSerializer(serializers.Serializer):
             if x in value:
                 raise serializers.ValidationError("Il titolo contiene caratteri non validi: " + x)
         return value
+    
+    def validate(self, attrs):
+        out = super().validate(attrs)
+        image = out["image"]
+        title = out["title"]
+        ext = Path(image.name).suffix
+        title = f"File:{title}{ext}"
+
+        url = f"https://commons.wikimedia.org/wiki/{title}"
+        r = requests.get(url)
+        if r.status_code == 200:
+            raise serializers.ValidationError("Esiste già un file con questo nome su Wikimedia Commons")
+
+        return out
 
 
 class UploadImagesSerializer(serializers.Serializer):

@@ -868,8 +868,8 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
         snapshot.category_snapshots.all().delete()
 
         #dropping old monuments .. should have be dropped in advance by the previous procedure
-        #logger.info(f"deleting monuments missing in snapshot")
-        #Monument.objects.exclude(snapshot__pk=snapshot.pk).delete()
+        logger.info(f"deleting monuments missing in snapshot")
+        Monument.objects.exclude(snapshot__pk=snapshot.pk).delete()
 
         # creating csv and xlsx full exports
         create_export(snapshot)
