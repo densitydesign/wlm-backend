@@ -140,7 +140,7 @@ class UploadImageSerializer(serializers.Serializer):
         title = f"File:{title}{ext}"
 
         url = f"https://commons.wikimedia.org/wiki/{title}"
-        r = requests.get(url)
+        r = requests.head(url)
         if r.status_code == 200:
             raise serializers.ValidationError("Esiste già un file con questo nome su Wikimedia Commons")
 
