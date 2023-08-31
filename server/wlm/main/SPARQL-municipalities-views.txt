@@ -20,7 +20,7 @@ SELECT DISTINCT
 
 WHERE {
   SERVICE wikibase:label { bd:serviceParam wikibase:language "it, [AUTO_LANGUAGE]". }
-  
+
   # seleziona i monumenti partecipanti a WLM in Italia
   ?mon wdt:P131* wd:Q38;
         p:P2186 ?wlms.

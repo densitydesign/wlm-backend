@@ -131,7 +131,7 @@ def search_commons_url(url):
             next_page = False
     return out 
 
-@retry(tries=3, delay=10)
+@retry(tries=5, delay=45)
 def search_commons_wlm(q_number, wlm_id):
     params = {
         "action": "query",
@@ -180,16 +180,18 @@ def search_commons_wlm(q_number, wlm_id):
                 out.append(temp_obj)
         else:
             next_page = False
+            
         
         if "continue" in data and  "grsoffset" in data["continue"]:
             params.update(data["continue"])
+            time.sleep(1)
         else:
             next_page = False
     
     return out
 
 
-@retry(tries=3, delay=10)
+@retry(tries=5, delay=45)
 def search_commons_cat(q_number, cat):    
 
     payload = {
@@ -242,10 +244,10 @@ def search_commons_cat(q_number, cat):
                 out.append(temp_obj)
         else:
             next_page = False
-        
-        #print("continue", data)
+            
         if "continue" in data and "batchcomplete" in data:
             payload.update(data["continue"])
+            time.sleep(1)
         else:
             next_page = False
     return out 

@@ -404,7 +404,7 @@ def get_administrative_areas(position, admin_entity=None):
                 )
                 province = municipality.province
                 region = province.region
-                logger.info(f"geo areas updated from admin_entity ({admin_entity})")
+                #logger.info(f"geo areas updated from admin_entity ({admin_entity})")
                 return {"municipality":municipality, "province":province, "region":region}
 
             except Municipality.DoesNotExist:
@@ -422,13 +422,14 @@ def get_administrative_areas(position, admin_entity=None):
         )
         province = municipality.province
         region = province.region
-        logger.info(f"geo areas updated from geo lookup (position)")
+        #logger.info(f"geo areas updated from geo lookup (position)")
         return {"municipality":municipality, "province":province, "region":region}
     except MunicipalityLookup.DoesNotExist:
         return None
 
 
 @transaction.atomic
+@retry(tries=2, delay=25)
 def update_monument(
     monument_data, category_snapshot, skip_pictures=False, skip_geo=False, category_only=True, reset_pictures=False
 ):
@@ -515,7 +516,7 @@ def update_monument(
     monument.categories.add(category)
 
     if reset_pictures:
-        logger.info(f"resetting pictures for {code}")
+        #logger.info(f"resetting pictures for {code}")
         monument.pictures.all().delete()
         monument.first_image_date = None
         monument.first_image_date_commons = None
@@ -523,7 +524,7 @@ def update_monument(
     wlm_pics_collected = 0
     commons_pics_collected = 0
     if not skip_pictures:
-        logger.info(f"Updating pictures for {code}")
+        #logger.info(f"Updating pictures for {code}")
         if monument_data.get("commons_n"):
             for cat in monument_data.get("commons_n"):
                 commons_image_data = search_commons_cat(monument.q_number, cat)
@@ -605,9 +606,12 @@ def update_monument(
 def update_category(
     monuments, category_snapshot, skip_pictures=False, skip_geo=False, category_only=False, reset_pictures=False
 ):
-    
+    failed_monuments = []
+    #print(monuments)
 
-    def process_monument(monument):
+    print("update category", category_snapshot.category.label)
+
+    def process_monument(monument, failed_queue):
         try:
             update_monument(
                 monument,
@@ -619,13 +623,28 @@ def update_category(
             )
         except Exception as e:
             logger.exception(e)
+            sentry_sdk.capture_exception(e)
+            failed_queue.append(monument)
             
-    Parallel(n_jobs=3, prefer="threads")(delayed(process_monument)(mon) for mon in monuments)
+            
+    Parallel(n_jobs=4, prefer="threads")(delayed(process_monument)(mon, failed_monuments) for mon in monuments)
     
+    
+    if failed_monuments:
+        logger.info("failed some monuments, trying to recover")
+        logger.info(failed_monuments)
+        sentry_sdk.capture_message("failed some monuments again, trying to recover" + str(failed_monuments))
 
+        failed_again = []
+        for mon in failed_monuments:
+            process_monument(mon, failed_again)
 
+        if failed_again:
+            logger.info("failed some monuments again " + str(failed_again))
+            sentry_sdk.capture_message("failed some monuments again, giving up s" + str(failed_monuments))
+            logger.info(failed_again)
+            
 
-@retry(tries=1, delay=45)
 def get_category_snapshot_payload(cat_snapshot):
     logger.info(f"get_category_snapshot_payload {cat_snapshot.category.label}")
     if not cat_snapshot.payload:
@@ -799,6 +818,10 @@ def take_snapshot(skip_pictures=False, skip_geo=False, force_restart=False, cate
         logger.info(cat_snapshot)
         categories_snapshots.append(cat_snapshot)
 
+    
+    #refresh cache in single thread
+    get_wikidata_municipalities(force_refresh=True)
+    
     all_q_numbers = []
     
     cats_errors = []
@@ -1197,17 +1220,21 @@ def create_export(snapshot):
 
 
 @retry(tries=5, delay=15)
-def get_wikidata_municipalities():
+def get_wikidata_municipalities(force_refresh=False):
     """
     Cached Lookup for municipalities q numbers
     updated once a day
     """
 
-    #last_snapshot = Snapshot.objects.filter(complete=True).order_by("-created").first()
-    today = date.today().isoformat()
-    cache_key = f"wikidata_monuments-municipalities-{today}"
+    last_snapshot = Snapshot.objects.filter(complete=True).order_by("-created").first()
+    if last_snapshot:
+        ls_key = last_snapshot.pk
+    else:
+        ls_key = "first"
+    #today = date.today().isoformat()
+    cache_key = f"wikidata_monuments-municipalities-{ls_key}"
     cache_value = cache.get(cache_key)
-    if cache_value:
+    if cache_value and not force_refresh:
         #logger.info(f"Getting muncipalities from cache of {today}")
         return cache_value
 
