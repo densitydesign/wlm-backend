@@ -717,6 +717,15 @@ def process_category_snapshot(
     for mon in already_updated_monuments:
         mon.categories.add(cat_snapshot.category)
 
+    logger.info(f"adding last snapshot {cat_snapshot.category.label} for all matched monuments")
+    Monument.objects.filter(
+        q_number__in=monuments_q_numbers
+    ).exclude(
+        snapshot=cat_snapshot.snapshot
+    ).update(
+        snapshot=cat_snapshot.snapshot
+    )
+
     logger.info(f"filtering new monuments for {cat_snapshot.category.label}")
     already_updated_monuments_q_numbers = [x.q_number for x in already_updated_monuments]
     new_monuments = [x for x in monuments if x.get('mon', None) not in already_updated_monuments_q_numbers]
