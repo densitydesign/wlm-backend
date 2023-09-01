@@ -531,7 +531,7 @@ class UploadImageView(APIView):
                             uuid4()
                         ),  # la upload response non ritorna l'ID pagina, mettiamo un id casuale per il vincolo di unicità del DB, a meno di problemi
                         image_url=upload_res_data["upload"]["imageinfo"]["url"],
-                        image_date=timezone.now(),
+                        image_date=date,
                         image_title=title,
                         image_type="wlm",
                         data={
