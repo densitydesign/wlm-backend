@@ -11,7 +11,7 @@ The application is based on the python language and the "django" web framework (
 The application has no public user interface, but exposes a web-based administrative interface used for configuration and database inspection purposes.
 
 
-# Project dependecies and application stack
+# Project dependecies and application stack
 
 The django web application depends on the following services:
 
