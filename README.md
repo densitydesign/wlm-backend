@@ -1,3 +1,5 @@
+⚠️ Project moved to [https://gitlab.wikimedia.org/repos/wikimedia-it/wlm/wlm-web-app-backend](https://gitlab.wikimedia.org/repos/wikimedia-it/wlm/wlm-web-app-backend) ⚠️
+
 # Project structure
 
 The WLM visualization backend is a server web application with the following purposes:
